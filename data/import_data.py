@@ -37,9 +37,9 @@ def import_experimental_data(fp):
     assert len(filepaths_x) == len(filepaths_y)
     print(f"Found {len(filepaths_x)} files.")
     for filepath_x,filepath_y in zip(filepaths_x,filepaths_y):
-        user = filepath_x.split("/")[-1].split("_")[1]
+        user = filepath_x.split('\\')[-1].split("_")[1]
         dataframes.append(import_single_file(filepath_x,filepath_y,user,exp_no))
-        print(filepath_x.split("/")[-1],filepath_y.split("/")[-1],user)
+        print(filepath_x.split('\\')[-1],filepath_y.split('\\')[-1],user)
     df = pd.concat(dataframes,axis=0)
     return df
 
@@ -50,9 +50,21 @@ def clean_data(name,df):
     """
     if name == 'exp1':
         df = df.reset_index(drop=True)
-        df.user = df.user.apply(lambda x: x.split("\\")[0])
+        # df.user = df.user.apply(lambda x: x.split("\\")[0])
     if name == 'exp2':
+        df = df.reset_index(drop=True)
         df = df.user.apply(lambda x: x.split('.')[0])
         df = df.iloc[:,2:]
-        pass
+    return df
+
+def import_clean_data(name,fp):
+    """
+    import clean dataset based on the name. Available dataset are {"exp1",
+    "exp2"}
+    """
+    if name in ['exp1','exp2']:
+        df = import_experimental_data(fp)
+        df = clean_data(name,df)
+    else:
+        return
     return df
