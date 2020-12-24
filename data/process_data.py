@@ -261,3 +261,7 @@ class DatasetObject(Dataset):
         for i in range(self.data.shape[0]):
             self.data[i,col] = self.encoders[0,col].transform(self.data[i,col].reshape(-1,1)).toarray()
         return encoder
+
+    def shuffle_data(self,data_set):
+        data_set['x'],data_set['y'],data_set['z'] = shuffle(data_set['x'],data_set['y'],data_set['z'])
+        return data_set
