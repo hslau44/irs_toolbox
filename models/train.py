@@ -108,15 +108,11 @@ def evalaute(model, test_loader):
 def main():
     folderpath1 = "D:/external_data/Experiment3/csv_files/exp_1"  # CHANGE THIS IF THE PATH CHANGED
     df_exp1 = import_experimental_data(folderpath1) # import_clean_data('exp1',
-    df_exp1.head()
     # process data
     X_ls, y_ls = seperate_dataframes(df_exp1)
     del df_exp1
     # DatasetObject
-    exp_1 = DatasetObject()
-    exp_1.import_data(X_ls, y_ls, window_size=800, slide_size=100, skip_labels=['noactivity'])
-    exp_1.data_transform(lambda arr: arr.reshape(*arr.shape, 1), axis=1, col=0)
-    exp_1.data_transform(lambda x,y,z : process_data.resampling(x, y, z, True), axis=0, col=0)
+    exp_1 = create_datasetobject(X_ls, y_ls)
     del X_ls,y_ls
     # Extract and Transfrom, and Load data into dataloaders
     idxs = [0]
@@ -129,7 +125,7 @@ def main():
     # criterion, optimizer
     criterion, optimizer = setting(model)
     # Train
-    epochs = 10
+    epochs = 2
     model  = train(model, train_loader, criterion, optimizer, epochs)
     # Evalaute
     arr = evalaute(model, test_loader)
