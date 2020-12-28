@@ -34,6 +34,14 @@ def seperate_dataframes(df):
         labels_ls.append(label)
     return features_ls,labels_ls
 
+
+def create_datasetobject(X,y):
+    datasetobj =  DatasetObject()
+    datasetobj.import_data(X, y, window_size=800, slide_size=100, skip_labels=['noactivity'])
+    datasetobj.data_transform(lambda arr: arr.reshape(*arr.shape, 1), axis=1, col=0)
+    datasetobj.data_transform(lambda x,y,z : process_data.resampling(x, y, z, True), axis=0, col=0)
+    return datasetobj
+
 def transform_pipeline(X_train, y_train, X_test, y_test):
     X_train = X_train.transpose(0,3,1,2)
     X_test = X_test.transpose(0,3,1,2)
@@ -93,6 +101,8 @@ def evalaute(model, test_loader):
     return arr
 
 
+
+
 # import data
 
 def main():
@@ -119,7 +129,7 @@ def main():
     # criterion, optimizer
     criterion, optimizer = setting(model)
     # Train
-    epochs = 100
+    epochs = 10
     model  = train(model, train_loader, criterion, optimizer, epochs)
     # Evalaute
     arr = evalaute(model, test_loader)
