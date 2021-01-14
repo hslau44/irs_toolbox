@@ -14,97 +14,71 @@ class Lambda(nn.Module):
         return self.func(x)
 
 
-
-class Split_Channel(nn.Module):
-    def __init__(self,unsqueeze=True):
-        super(Split_Channel, self).__init__()
-        self.unsqueeze = unsqueeze
-
-    def forward(self, x):
-        return self.split_channel(x)
-
-    def split_channel(self, x):
-        if self.unsqueeze == True:
-            return [x[:,i].unsqueeze(1) for i in range(x.shape[1])]
-        else:
-            return [x[:,i] for i in range(x.shape[1])]
-
-
-class CNN_SingleStream(nn.Module):
-
+class Encoder(nn.Module):
+    """
+    Single channel for radio image (30,30,1)
+    """
     def __init__(self):
-        super(CNN_SingleStream, self).__init__()
+        super(Encoder, self).__init__()
         ### 1st ###
-        self.conv1 = nn.Conv2d(1,32,kernel_size=3,stride=2)
+        self.conv1 = nn.Conv2d(1,64,kernel_size=(5,5),stride=(3,3))
         self.actv1 = nn.ReLU()
         self.norm1 = Lambda(lambda x:x)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2,2),stride=(1,1))
+        self.pool1 = Lambda(lambda x:x) # nn.MaxPool2d(kernel_size=(2,2),stride=(2,2))
         ### 2nd ###
-        self.conv2 = nn.Conv2d(32,64,kernel_size=3,stride=2)
+        self.conv2 = nn.Conv2d(64,128,kernel_size=(4,4),stride=(2,2))
         self.actv2 = nn.ReLU()
         self.norm2 = Lambda(lambda x:x)
-        self.pool2 = nn.MaxPool2d(kernel_size=(2,2),stride=(1,1))
+        self.pool2 = Lambda(lambda x:x)
         ### 3rd ###
-        self.conv3 = nn.Conv2d(64,128,kernel_size=3,stride=2)
+        self.conv3 = nn.Conv2d(128,256,kernel_size=(3,3),stride=(2,2))
         self.actv3 = nn.ReLU()
         self.norm3 = Lambda(lambda x:x)
         self.pool3 = Lambda(lambda x:x)
-        ### Global_pooling ###
-        self.final = nn.AdaptiveAvgPool2d((1,1))
 
     def forward(self,X):
+        X = X.permute(0,3,1,2)
         X = self.pool1(self.norm1(self.actv1(self.conv1(X))))
         X = self.pool2(self.norm2(self.actv2(self.conv2(X))))
         X = self.pool3(self.norm3(self.actv3(self.conv3(X))))
-        X = self.final(X)
-        X = torch.flatten(X,1)
+#         X = self.actv4(self.conv4(X))
+        X = torch.flatten(X, 1)
         return X
 
-class CNN_MultiStream(nn.Module):
 
-    def __init__(self):
-        super(CNN_MultiStream, self).__init__()
-        self.split = Split_Channel()
-        self.convnet_c1 = CNN_SingleStream()
-        self.convnet_c2 = CNN_SingleStream()
-        self.convnet_c3 = CNN_SingleStream()
-        self.concat = Lambda(lambda a,b,c: torch.cat((a,b,c),-1))
+class Encoder_View(nn.Module):
+    """
+
+    This model first divides a spectrogram into number of pieces based on window and channel,
+    each piece is processed with the single encoder and output a matrix with shape (batch_size, seq_size, num_features),
+    input shape: (batch_size,num_frame,num_channel)
+    """
+    def __init__(self, encoder, window=30, channel=30):
+        super(Encoder_View, self).__init__()
+        self.encoder = encoder
+        self.window = window
+        self.channel = channel
+        self.size = None
 
     def forward(self,x):
-        a,b,c = self.split(x)
-        a = self.convnet_c1(a)
-        b = self.convnet_c2(b)
-        c = self.convnet_c2(c)
-        x = torch.cat((a,b,c),-1)
+        # pre
+        self.size = x.shape
+        assert self.size[1]%self.window == 0
+        assert self.size[2]%self.channel == 0
+        x = x.reshape(-1,self.size[1]//self.window,self.window,self.channel,self.size[2]//self.channel)
+        x = x.permute(0,1,4,2,3)
+        assert x.shape[3:] == (self.window,self.channel)
+        self.size = x.shape[:3]
+        x = x.reshape(-1,self.window,self.channel,1)
+        # processing
+        x = self.encoder(x)
+        # post
+        x = x.reshape(*self.size[:-1],self.size[-1]*x.shape[-1])
         return x
 
-class LSTM_Baseline(nn.Module):
-    def __init__(self,seq_size,feature_size):
-        """
-        Baseline LSTM model
 
-        attr:
-        seq_size: length of the sequence
-        feature_size: feature size of each interval in the sequence
-
-        """
-        super(LSTM_Baseline, self).__init__()
-
-        self.lstm1 = nn.LSTM(feature_size,200)
-        self.lstm2 = nn.LSTM(200,3)
-        self.linear1 = nn.Linear(3*seq_size,30)
-        self.linear2 = nn.Linear(30,8)
-
-    def forward(self,X):
-        X, _ = self.lstm1(X)
-        X, _ = self.lstm2(X)
-        X = torch.flatten(X,1)
-        X = self.linear1(X)
-        X = self.linear2(X)
-        return F.log_softmax(X,dim=1)
-
-class CNN_LSTM_OneToOne(nn.Module):
-    def __init__(self,seq_size):
+class CNN_LSTM_Module(nn.Module):
+    def __init__(self,cnn,lstm):
         """
         CNN-LSTM model
 
@@ -113,20 +87,11 @@ class CNN_LSTM_OneToOne(nn.Module):
         feature_size: feature size of each interval in the sequence
 
         """
-        super(CNN_LSTM_OneToOne, self).__init__()
-        self.split = Split_Channel(unsqueeze=False)
-        self.cnn = CNN_MultiStream()
-        self.lstm = LSTM_Baseline(seq_size=seq_size, feature_size=3*128)
+        super(CNN_LSTM_Module, self).__init__()
+        self.cnn = cnn
+        self.lstm = lstm
 
     def forward(self,X):
-        X = self.split(X)
-        X = [self.cnn(X[i]).unsqueeze(1) for i in range(len(X))]
-        X = torch.cat(X,1)
+        X = self.cnn(X)
         X = self.lstm(X)
         return X
-
-# sample_size = 128
-# tensor_sample  = torch.ones(size=(sample_size, 20, 3, 40, 30))
-# model = CNN_LSTM_OneToOne(seq_size=20)
-# output = model.forward(tensor_sample)
-# output.shape
