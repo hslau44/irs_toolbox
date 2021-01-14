@@ -21,7 +21,7 @@ if __name__ == '__main__':
         'epochs': 10,
         'model': 'resnet18-finetune'
     }
-    logging.info(f'Using device={device} 🚀')
+    logging.info(f'Using device={device}')
     # everything starts with the data
     train_dl, val_dl, test_dl = get_dataloaders(
         project.data_dir / "train",
