@@ -55,9 +55,9 @@ class Classifier(nn.Module):
         self.linear2 = nn.Linear(128,8)
 
     def forward(self,X):
-        X = F.dropout(F.leaky_relu(self.linear1(X)))
+        X = F.dropout(F.leaky_relu(self.linear1(X)),0.1)
         X = self.linear2(X)
-        return F.log_softmax(X,dim=0)
+        return X
 
 
 class CNN_module(nn.Module):
@@ -73,3 +73,16 @@ class CNN_module(nn.Module):
         X = self.encoder(X)
         X = self.decoder(X)
         return X
+
+
+class Autoencoder(nn.Module):
+
+    def __init__(self, encoder, decoder):
+        super(Autoencoder, self).__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def forward(self,x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
