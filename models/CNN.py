@@ -11,44 +11,82 @@ class Lambda(nn.Module):
     def forward(self, x):
         return self.func(x)
 
-class Encoder(nn.Module):
-    def __init__(self):
-        super(Encoder, self).__init__()
+class Residual_Block(nn.Module):
+    """
+    Single channel for radio image (30,30,1)
+    """
+    def __init__(self,in_feature,out_feature,kernel_size,stride, padding='zeros', bias=False):
+        super(Residual_Block, self).__init__()
         ### 1st ###
-        self.conv1 = nn.Conv2d(1,64,kernel_size=5,stride=5)
-        self.actv1 = nn.ReLU()
-        self.norm1 = Lambda(lambda x:x)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
+        self.conv1 = nn.Conv2d(in_feature,out_feature,kernel_size=kernel_size,stride=stride, bias=bias)
+        self.norm1 = nn.BatchNorm2d(out_feature)
+        self.actv1 = nn.ReLU(inplace=True)
+        self.pool1 = nn.AvgPool2d(kernel_size=kernel_size,stride=stride)
+        self.covr1 = nn.Conv2d(in_feature,out_feature,kernel_size=1,stride=1, bias=False)
         ### 2nd ###
-        self.conv2 = nn.Conv2d(64,128,kernel_size=3,stride=3)
-        self.actv2 = nn.ReLU()
-        self.norm2 = Lambda(lambda x:x)
-        self.pool2 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
-        ### 3rd ###
-        self.conv3 = nn.Conv2d(128,256,kernel_size=2,stride=2)
-        self.actv3 = nn.ReLU()
-        self.norm3 = Lambda(lambda x:x)
-        self.pool3 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
+        self.conv2 = nn.Conv2d(out_feature,out_feature,kernel_size=kernel_size,stride=stride, bias=bias)
+        self.norm2 = nn.BatchNorm2d(out_feature)
+        self.actv2 = nn.ReLU(inplace=True)
+        self.pool2 = nn.AvgPool2d(kernel_size=kernel_size,stride=stride)
+
+        self.covr1.weight.requires_grad = False
 
     def forward(self,X):
-        X = self.pool1(self.norm1(self.actv1(self.conv1(X))))
-        X = self.pool2(self.norm2(self.actv2(self.conv2(X))))
-        X = self.pool3(self.norm3(self.actv3(self.conv3(X))))
-        X = torch.flatten(X, 1)
+        R = X
+        ### 1st ###
+        X = self.actv1(self.norm1(self.conv1(X)))
+        R = self.covr1(self.pool1(R))
+        ### 2nd ###
+        X = self.norm2(self.conv2(X))
+        R = self.pool2(R)
+        # print(X.shape,R.shape)
+        X += R
+        X = self.actv2(X)
         return X
 
+class Residual(nn.Module):
+
+    def __init__(self):
+        super(Residual, self).__init__()
+        self.norm = nn.BatchNorm2d(1)
+        self.block1 = Residual_Block(in_feature=  1, out_feature=  64, kernel_size = (5,5), stride = (1,3))
+        self.block2 = Residual_Block(in_feature= 64, out_feature= 128, kernel_size = (4,4), stride = (1,2))
+        self.block3 = Residual_Block(in_feature=128, out_feature= 256, kernel_size = (3,3), stride = (2,2))
+        self.pool = nn.AdaptiveAvgPool2d((1,1))
+
+    def forward(self,x):
+        x = self.norm(x)
+        x = self.block1(x)
+        x = self.block2(x)
+        x = self.block3(x)
+        x = torch.flatten(self.pool(x), 1)
+        return x
 
 
-class Classifier(nn.Module):
-    def __init__(self,input_shape):
-        super(Classifier, self).__init__()
-        self.linear1 = nn.Linear(input_shape,128)
-        self.linear2 = nn.Linear(128,8)
+class Encoder_View(nn.Module):
+    """
 
-    def forward(self,X):
-        X = F.dropout(F.leaky_relu(self.linear1(X)))
-        X = self.linear2(X)
-        return F.log_softmax(X,dim=0)
+    This model first divides a spectrogram into number of pieces based on window and channel,
+    each piece is processed with the single encoder and output a matrix with shape (batch_size, seq_size, num_features),
+    input shape: (batch_size,num_frame,num_channel)
+    """
+    def __init__(self, encoder=None):
+        super(Encoder_View, self).__init__()
+        self.encoder = encoder
+
+    def forward(self,x):
+        ### Method 1 ###
+#         size = x.shape
+#         x = x.view(-1,1,30,900)
+#         x = self.encoder(x)
+#         x = x.view(size[0],-1)
+        ### Method 2 ###
+        a,b,c = torch.split(x,1,dim=1)
+        a = self.encoder(a)
+        b = self.encoder(b)
+        c = self.encoder(c)
+        x = torch.cat([a,b,c],dim=1)
+        return x
 
 
 class CNN_module(nn.Module):
@@ -61,72 +99,3 @@ class CNN_module(nn.Module):
         X = self.encoder(X)
         X = self.decoder(X)
         return X
-
-
-
-class CNN_no_1(nn.Module):
-    def __init__(self):
-        super(CNN_no_1, self).__init__()
-        ### 1st ###
-        self.conv1 = nn.Conv2d(1,64,kernel_size=5,stride=5)
-        self.actv1 = nn.ReLU()
-        self.norm1 = Lambda(lambda x:x)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
-        ### 2nd ###
-        self.conv2 = nn.Conv2d(64,128,kernel_size=3,stride=3)
-        self.actv2 = nn.ReLU()
-        self.norm2 = Lambda(lambda x:x)
-        self.pool2 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
-        ### 3rd ###
-        self.conv3 = nn.Conv2d(128,256,kernel_size=2,stride=2)
-        self.actv3 = nn.ReLU()
-        self.norm3 = Lambda(lambda x:x)
-        self.pool3 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
-        ### Classifier ####
-        self.linear1 = nn.Linear(768,128)
-        self.linear2 = nn.Linear(128,8)
-
-    def forward(self,X):
-        X = self.pool1(self.norm1(self.actv1(self.conv1(X))))
-        X = self.pool2(self.norm2(self.actv2(self.conv2(X))))
-        X = self.pool3(self.norm3(self.actv3(self.conv3(X))))
-        X = torch.flatten(X, 1)
-        X = F.dropout(F.leaky_relu(self.linear1(X)))
-        X = self.linear2(X)
-        return F.log_softmax(X,dim=0)
-
-
-class CNN_no_2(nn.Module):
-    def __init__(self):
-        super(CNN_no_2, self).__init__()
-        print('building model 2')
-        ### 1st ###
-        self.conv1 = nn.Conv2d(1,32,kernel_size=5,stride=5)
-        self.actv1 = nn.ReLU()
-        self.norm1 = Lambda(lambda x:x)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2,1),stride=(2,1))
-        ### 2nd ###
-        self.conv2 = nn.Conv2d(32,128,kernel_size=4,stride=4)
-        self.actv2 = nn.ReLU()
-        self.norm2 = Lambda(lambda x:x)
-        self.pool2 = nn.MaxPool2d(kernel_size=(2,1),stride=(2,1))
-        ### 3rd ###
-        self.conv3 = nn.Conv2d(128,512,kernel_size=2,stride=2)
-        self.actv3 = nn.ReLU()
-        self.norm3 = Lambda(lambda x:x)
-        self.pool3 = nn.MaxPool2d(kernel_size=(2,1),stride=(2,1))
-        ### Global_pooling ###
-        self.final = nn.AdaptiveAvgPool2d((2,1))
-        ### Classifier ####
-        self.linear1 = nn.Linear(1024,128)
-        self.linear2 = nn.Linear(128,8)
-
-    def forward(self,X):
-        X = self.pool1(self.norm1(self.actv1(self.conv1(X))))
-        X = self.pool2(self.norm2(self.actv2(self.conv2(X))))
-        X = self.pool3(self.norm3(self.actv3(self.conv3(X))))
-        X = self.final(X)
-        X = torch.flatten(X,1)
-        X = F.dropout(F.leaky_relu(self.linear1(X)))
-        X = self.linear2(X)
-        return F.log_softmax(X,dim=0)
