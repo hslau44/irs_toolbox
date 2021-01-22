@@ -25,22 +25,90 @@ from torchsummary import summary
 # get_ipython().run_line_magic('matplotlib', 'inline')
 
 
+from data import process_data
+from data.import_data import import_experimental_data
+from data.datasetobj import DatasetObject
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import LabelEncoder
+from torch import Tensor
+from torch.utils.data import DataLoader, TensorDataset
+from models.baseline import Lambda, Classifier,CNN_module
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 
-def create_dataloaders(X_train, y_train, X_test, y_test, batch_sizes={'train':128, 'test':2048}):
+
+def seperate_dataframes(df):
+    features_ls,labels_ls = [],[]
+    for user in df['user'].unique():
+        dataframe = df[df['user']==user]
+        features = dataframe[[f'amp_{i}' for i in range(1,91)]].to_numpy()
+        features = MinMaxScaler().fit_transform(features)
+        features_ls.append(features)
+        label = dataframe[['label']].to_numpy()
+        labels_ls.append(label)
+    return features_ls,labels_ls
+
+
+def create_datasetobj(X,y):
+    datasetobj = DatasetObject()
+    datasetobj.import_data(X, y)
+    return datasetobj
+
+
+
+def transform_datasetobj(datasetobj):
+    window_size = 1000
+    slide_size = 200
+    datasetobj.data_transform(lambda x,y,z : process_data.slide_augmentation(x, y, z,
+                                                                window_size=window_size,
+                                                                slide_size=slide_size,
+                                                                skip_labels=['noactivity']),axis=0)
+    datasetobj.data_transform(lambda arr: arr.reshape(-1,window_size,1,90).transpose(0,2,3,1),axis=1, col=0)
+    datasetobj.data_transform(lambda x,y,z : process_data.resampling(x, y, z, oversampling = True),axis=0)
+    label_encoder = LabelEncoder()
+    label_encoder.fit(datasetobj()[1])
+    datasetobj.data_transform(lambda arr: label_encoder.transform(arr).reshape(arr.shape),axis=1, col=1)
+    return datasetobj, label_encoder
+
+
+
+def create_dataloaders(X_train, y_train, X_test, y_test, batch_sizes={'train':64, 'test':200}):
     traindataset = TensorDataset(Tensor(X_train),Tensor(y_train).long())
     testdataset = TensorDataset(Tensor(X_test), Tensor(y_test).long())
-    train_loader = DataLoader(traindataset, batch_size=batch_sizes['train'], shuffle=True, num_workers=0, drop_last=True)
-    test_loader = DataLoader(testdataset, batch_size=batch_sizes['test'], shuffle=True, num_workers=0)
+    train_loader = DataLoader(traindataset, batch_size=batch_sizes['train'], shuffle=True, num_workers=4, drop_last=True)
+    test_loader = DataLoader(testdataset, batch_size=batch_sizes['test'], shuffle=True, num_workers=4)
     return train_loader, test_loader
 
-def print_summary(model,input_size):
-    print(summary(model,input_size))
-    return
+def create_model():
+    encoder = V2()
+    classifier = Classifier(2304)
+    model = CNN_module(encoder=encoder,decoder=classifier)
+    return model
+
 
 def setting(model):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
     return criterion, optimizer
+
+
+def prepare_data():
+    folderpath1 = "E:/external_data/Experiment3/csv_files/exp_1"
+    df_exp1 = import_experimental_data(folderpath1)
+    X_ls, y_ls = seperate_dataframes(df_exp1)
+    del df_exp1
+    datasetobj = create_datasetobj(X_ls,y_ls)
+    datasetobj, label_encoder = transform_datasetobj(datasetobj)
+    datasetobj.shape()
+    del X_ls, y_ls
+    (X_train, y_train,_),(X_test, y_test,_) = datasetobj([9],return_train_sets=True)
+    train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test)
+    del X_train, y_train, X_test, y_test
+return train_loader, test_loader
+
+
+
+
+
 
 def train(model, train_loader, criterion, optimizer, end, start = 1, evaluation = None, auto_save = None, **kwargs):
     print('Start Training')
@@ -65,6 +133,31 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, evaluation 
                 save_checkpoint(model,optimizer,i,directory)
         i += 1
     return model
+
+def train_unsupervised(model, train_loader, criterion, optimizer, end, start = 1, evaluation = None, auto_save = None, **kwargs):
+    print('Start Training')
+    i = start
+    while i <= end:
+        print(f"Epoch {i}: ", end='')
+        for b, (X_train, _) in enumerate(train_loader):
+            print(f">", end='')
+            optimizer.zero_grad()
+            outputs = model(X_train)
+            loss   = criterion(outputs, X_train)
+            loss.backward()
+            optimizer.step()
+        print(f' loss: {loss.tolist()}')
+        if i%100 == 0:
+            if evaluation == True:
+                array = evaluate(model,test_loader=kwargs['test_loader'])
+                print('Evaluation:')
+                print(array)
+            if auto_save == True:
+                directory = make_directory(name=kwargs['name'],epoch=i)
+                save_checkpoint(model,optimizer,i,directory)
+        i += 1
+    return model
+
 
 def cross_validation(model_func, setting, datasetobj, cross_valid = False):
 
@@ -112,14 +205,11 @@ def make_directory(name, epoch=None, filepath='./models/saved_models/'):
     return directory
 
 def save_checkpoint(model,optimizer,epoch,directory):
-
     torch.save({'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 }, directory)
-
     print(f"save checkpoint in : {directory}")
-
     return
 
 def load_checkpoint(model,optimizer,filepath):
@@ -148,22 +238,25 @@ def seperate_dataframes(df):
 # ----------------------------- helper -----------------------------------
 
 def create_datasetobject(X,y):
+    window_size = 900
+    slide_size = 200
     datasetobj = DatasetObject()
     datasetobj.import_data(X, y)
     datasetobj.data_transform(lambda x,y,z : process_data.slide_augmentation(x, y, z,
-                                                                window_size=900,
-                                                                slide_size=200,
+                                                                window_size=window_size,
+                                                                slide_size=slide_size,
                                                                 skip_labels=['noactivity']),axis=0)
 
     # datasetobj.data_transform(lambda arr: arr.reshape(*arr.shape, 1),axis=1, col=0)
     # datasetobj.data_transform(lambda arr: arr.transpose(0,3,1,2),axis=1, col=0)
+    datasetobj.data_transform(lambda arr: arr.reshape(-1,window_size,3,30).transpose(0,2,3,1),axis=1, col=0)
     datasetobj.data_transform(lambda x,y,z : process_data.resampling(x, y, z, oversampling = True),axis=0)
 
     label_encoder = LabelEncoder()
     label_encoder.fit(datasetobj()[1])
     datasetobj.data_transform(lambda arr: label_encoder.transform(arr).reshape(arr.shape),axis=1, col=1)
     datasetobj.shape()
-    return datasetobj
+    return datasetobj, label_encoder
 
 
 
