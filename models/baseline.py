@@ -14,42 +14,43 @@ class Lambda(nn.Module):
     def forward(self, x):
         return self.func(x)
 
-class V1(nn.Module):
+class Encoder(nn.Module):
     """
     The baseline encoder take a batch of CSI spectrogram (n,1,num_frame,num_channel) and output flatten latent feature
     """
     def __init__(self):
-        super(V1, self).__init__()
+        super(Encoder, self).__init__()
         ### 1st ###
         self.conv1 = nn.Conv2d(1,64,kernel_size=5,stride=5)
+        self.norm1 = nn.BatchNorm2d(64)
         self.actv1 = nn.ReLU()
-        self.norm1 = Lambda(lambda x:x)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
+        self.pool1 = nn.MaxPool2d(kernel_size=(2,2),stride=(1,2))
         ### 2nd ###
         self.conv2 = nn.Conv2d(64,128,kernel_size=3,stride=3)
+        self.norm2 = nn.BatchNorm2d(128)
         self.actv2 = nn.ReLU()
-        self.norm2 = Lambda(lambda x:x)
-        self.pool2 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
+        self.pool2 = nn.MaxPool2d(kernel_size=(2,2),stride=(1,2))
         ### 3rd ###
         self.conv3 = nn.Conv2d(128,256,kernel_size=2,stride=2)
-        self.actv3 = nn.ReLU()
         self.norm3 = Lambda(lambda x:x)
-        self.pool3 = nn.MaxPool2d(kernel_size=(2,2),stride=(2,1))
+        self.actv3 = nn.Tanh()
+        self.pool3 = nn.MaxPool2d(kernel_size=(2,2),stride=(1,2))
 
     def forward(self,X):
-        X = self.pool1(self.norm1(self.actv1(self.conv1(X))))
-        X = self.pool2(self.norm2(self.actv2(self.conv2(X))))
-        X = self.pool3(self.norm3(self.actv3(self.conv3(X))))
+        X = self.pool1(self.actv1(self.norm1(self.conv1(X))))
+        X = self.pool2(self.actv2(self.norm2(self.conv2(X))))
+        X = self.pool3(self.actv3(self.norm3(self.conv3(X))))
         X = torch.flatten(X, 1)
         return X
 
 class V2(nn.Module):
     """
-    The baseline encoder take a batch of CSI spectrogram (n,1,num_frame,num_channel) and output flatten latent feature
+    The 4 layers encoder take a batch of CSI spectrogram (n,1,num_frame,num_channel) and output flatten latent feature
+    output size = 2304
     """
     def __init__(self):
         super(V2, self).__init__()
-        self.norm0 = nn.BatchNorm2d(1)
+        self.norm0 = Lambda(lambda x:x)
         ### 1st ###
         self.conv1 = nn.Conv2d(1,32,kernel_size=3,stride=(2,2))
         self.actv1 = nn.ReLU()
@@ -59,15 +60,15 @@ class V2(nn.Module):
         self.conv2 = nn.Conv2d(32,64,kernel_size=3,stride=(2,2))
         self.actv2 = nn.ReLU()
         self.norm2 = nn.BatchNorm2d(64)
-        self.pool2 = nn.MaxPool2d(kernel_size=(1,2))
+        self.pool2 = nn.MaxPool2d(kernel_size=(2,2),stride=(1,2))
         ### 3rd ###
         self.conv3 = nn.Conv2d(64,128,kernel_size=3,stride=(2,2))
         self.actv3 = nn.ReLU()
         self.norm3 = nn.BatchNorm2d(128)
-        self.pool3 = nn.MaxPool2d(kernel_size=(1,2))
+        self.pool3 = nn.MaxPool2d(kernel_size=(2,2),stride=(1,2))
         ### 4rd ###
         self.conv4 = nn.Conv2d(128,256,kernel_size=3,stride=(2,2))
-        self.actv4 = nn.ReLU()
+        self.actv4 = nn.Tanh()
         self.norm4 = Lambda(lambda x:x)
         self.pool4 = nn.AdaptiveAvgPool2d(output_size=(3,3))
         ### 5rd ###

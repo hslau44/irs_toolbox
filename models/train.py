@@ -4,36 +4,26 @@ from time import gmtime, strftime
 import numpy as np
 import pandas as pd
 import seaborn as sns  # for heatmaps
-from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from torch import Tensor, nn
 from torch.nn import functional as F
 
 
-from models.CNN import Encoder,Classifier
+
 
 root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_folder)
 
 from data import process_data
 from data.import_data import import_experimental_data
-from data.process_data import DatasetObject
-from torchsummary import summary
-# get_ipython().run_line_magic('matplotlib', 'inline')
-
-
-from data import process_data
-from data.import_data import import_experimental_data
 from data.datasetobj import DatasetObject
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import LabelEncoder
-from torch import Tensor
-from torch.utils.data import DataLoader, TensorDataset
+from torchsummary import summary
 from models.baseline import Lambda, Classifier,CNN_module
-from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
+# get_ipython().run_line_magic('matplotlib', 'inline')
 
 
 def seperate_dataframes(df):
@@ -53,8 +43,6 @@ def create_datasetobj(X,y):
     datasetobj.import_data(X, y)
     return datasetobj
 
-
-
 def transform_datasetobj(datasetobj):
     window_size = 1000
     slide_size = 200
@@ -70,7 +58,6 @@ def transform_datasetobj(datasetobj):
     return datasetobj, label_encoder
 
 
-
 def create_dataloaders(X_train, y_train, X_test, y_test, batch_sizes={'train':64, 'test':200}):
     traindataset = TensorDataset(Tensor(X_train),Tensor(y_train).long())
     testdataset = TensorDataset(Tensor(X_test), Tensor(y_test).long())
@@ -78,17 +65,17 @@ def create_dataloaders(X_train, y_train, X_test, y_test, batch_sizes={'train':64
     test_loader = DataLoader(testdataset, batch_size=batch_sizes['test'], shuffle=True, num_workers=4)
     return train_loader, test_loader
 
-def create_model():
-    encoder = V2()
-    classifier = Classifier(2304)
-    model = CNN_module(encoder=encoder,decoder=classifier)
-    return model
-
-
-def setting(model):
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
-    return criterion, optimizer
+# def create_model():
+#     encoder = V2()
+#     classifier = Classifier(2304)
+#     model = CNN_module(encoder=encoder,decoder=classifier)
+#     return model
+#
+#
+# def setting(model):
+#     criterion = nn.CrossEntropyLoss()
+#     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
+#     return criterion, optimizer
 
 
 def prepare_data():
@@ -103,101 +90,90 @@ def prepare_data():
     (X_train, y_train,_),(X_test, y_test,_) = datasetobj([9],return_train_sets=True)
     train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test)
     del X_train, y_train, X_test, y_test
-return train_loader, test_loader
+    return train_loader, test_loader
 
 
 
 
 
 
-def train(model, train_loader, criterion, optimizer, end, start = 1, evaluation = None, auto_save = None, **kwargs):
+def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader = None, auto_save = None, parallel = None, **kwargs):
+
+    # Check device setting
+    if parallel == True:
+        print('GPU')
+        model = model.cuda()
+    else:
+        print('CPU')
+
     print('Start Training')
+    record = {'train':[],'validation':[]}
     i = start
+    #Loop
     while i <= end:
         print(f"Epoch {i}: ", end='')
         for b, (X_train, y_train) in enumerate(train_loader):
+            if parallel == True:
+                X_train, y_train = X_train.cuda(), y_train.cuda() #.to(device)
             print(f">", end='')
             optimizer.zero_grad()
             y_pred = model(X_train)
             loss   = criterion(y_pred, y_train)
             loss.backward()
             optimizer.step()
-        print(f' loss: {loss.tolist()}')
-        if i%100 == 0:
-            if evaluation == True:
-                array = evaluate(model,test_loader=kwargs['test_loader'])
-                print('Evaluation:')
-                print(array)
-            if auto_save == True:
-                directory = make_directory(name=kwargs['name'],epoch=i)
-                save_checkpoint(model,optimizer,i,directory)
+            del X_train, y_train, y_pred
+        # One epoch completed
+        loss = loss.tolist()
+        record['train'].append(loss)
+        print(f' loss: {loss} ',end='')
+        if (test_loader != None) and i%100 ==0 :
+            acc = short_evaluation(model,test_loader,parallel)
+            record['validation'].append(acc)
+            print(f' accuracy: {acc}')
+        else:
+            print('')
         i += 1
-    return model
 
-def train_unsupervised(model, train_loader, criterion, optimizer, end, start = 1, evaluation = None, auto_save = None, **kwargs):
-    print('Start Training')
-    i = start
-    while i <= end:
-        print(f"Epoch {i}: ", end='')
-        for b, (X_train, _) in enumerate(train_loader):
-            print(f">", end='')
-            optimizer.zero_grad()
-            outputs = model(X_train)
-            loss   = criterion(outputs, X_train)
-            loss.backward()
-            optimizer.step()
-        print(f' loss: {loss.tolist()}')
-        if i%100 == 0:
-            if evaluation == True:
-                array = evaluate(model,test_loader=kwargs['test_loader'])
-                print('Evaluation:')
-                print(array)
-            if auto_save == True:
-                directory = make_directory(name=kwargs['name'],epoch=i)
-                save_checkpoint(model,optimizer,i,directory)
-        i += 1
-    return model
+    model = model.cpu()
+    return model, record
 
-
-def cross_validation(model_func, setting, datasetobj, cross_valid = False):
-
-    epochs = 100
-
-    cmtxs = []
-
-    for i in range(datasetobj.shape()[0]):
-
-        model = model_func()
-
-        criterion, optimizer = setting(model)
-
-        (X_train, y_train,_),(X_test, y_test,_) = datasetobj([i],return_sets=True)
-
-        # X_train, y_train, X_test, y_test = transform_pipeline(X_train, y_train, X_test, y_test)
-
-        train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test)
-
-        del X_train, y_train, X_test, y_test
-
-        model  = train(model, train_loader, criterion, optimizer, epochs)
-
-        cmtx = evalaute(model, test_loader)
-
-        del model
-
-        cmtxs.append(cmtx)
-
-    return cmtxs
-
-
-def evaluate(model, test_loader):
+def short_evaluation(model,test_loader,parallel):
+    # copy the model to cpu
+    if parallel == True:
+        model = model.cpu()
     with torch.no_grad():
         for X_test, y_test in test_loader:
             y_val = model(X_test)
             predicted = torch.max(y_val, 1)[1]
-    print(classification_report(y_test.view(-1), predicted.view(-1)))
-    arr = confusion_matrix(y_test.view(-1), predicted.view(-1))
-    return arr
+            acc = accuracy_score(y_test.view(-1), predicted.view(-1))
+    # send model back to gpu
+    if parallel == True:
+        model = model.cuda()
+    return acc
+
+
+
+def evaluation(model,test_loader):
+    model = model.cpu()
+    with torch.no_grad():
+        for X_test, y_test in test_loader:
+            X_test, y_test = X_test, y_test
+            y_val = model(X_test)
+            predicted = torch.max(y_val, 1)[1]
+    cls = classification_report(y_test.view(-1), predicted.view(-1), output_dict=True)
+    cls = pd.DataFrame(cls)
+    print(cls)
+    cmtx = confusion_matrix(y_test.view(-1), predicted.view(-1))
+    return cmtx,cls
+
+def cmtx_table(cmtx,label_encoder=None):
+    if label_encoder != None:
+        cmtx = pd.DataFrame(cmtx,
+                            index=[f"actual: {i}"for i in label_encoder.categories_[0].tolist()],
+                            columns=[f"predict : {i}"for i in label_encoder.categories_[0].tolist()])
+    else:
+        cmtx = pd.DataFrame(cmtx)
+    return cmtx
 
 def make_directory(name, epoch=None, filepath='./models/saved_models/'):
     time = strftime("%Y_%m_%d_%H_%M", gmtime())
