@@ -6,24 +6,28 @@ import pandas as pd
 import seaborn as sns  # for heatmaps
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from torch import Tensor, nn
 from torch.nn import functional as F
 
-
-
-
 root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_folder)
-
 from data import process_data
-from data.import_data import import_experimental_data
+from data.import_data import import_experimental_data, import_clean_data
 from data.datasetobj import DatasetObject
 from torchsummary import summary
 from models.baseline import Lambda, Classifier,CNN_module
 # get_ipython().run_line_magic('matplotlib', 'inline')
+
+
+device = torch.device("cuda:0")
+torch.cuda.set_device(device)
+
+np.random.seed(1024)
+torch.manual_seed(1024)
+
 
 
 def seperate_dataframes(df):
@@ -61,8 +65,8 @@ def transform_datasetobj(datasetobj):
 def create_dataloaders(X_train, y_train, X_test, y_test, batch_sizes={'train':64, 'test':200}):
     traindataset = TensorDataset(Tensor(X_train),Tensor(y_train).long())
     testdataset = TensorDataset(Tensor(X_test), Tensor(y_test).long())
-    train_loader = DataLoader(traindataset, batch_size=batch_sizes['train'], shuffle=True, num_workers=4, drop_last=True)
-    test_loader = DataLoader(testdataset, batch_size=batch_sizes['test'], shuffle=True, num_workers=4)
+    train_loader = DataLoader(traindataset, batch_size=batch_sizes['train'], shuffle=True, num_workers=1, drop_last=True)
+    test_loader = DataLoader(testdataset, batch_size=batch_sizes['test'], shuffle=True, num_workers=1)
     return train_loader, test_loader
 
 # def create_model():
@@ -78,26 +82,14 @@ def create_dataloaders(X_train, y_train, X_test, y_test, batch_sizes={'train':64
 #     return criterion, optimizer
 
 
-def prepare_data():
-    folderpath1 = "E:/external_data/Experiment3/csv_files/exp_1"
-    df_exp1 = import_experimental_data(folderpath1)
-    X_ls, y_ls = seperate_dataframes(df_exp1)
-    del df_exp1
-    datasetobj = create_datasetobj(X_ls,y_ls)
-    datasetobj, label_encoder = transform_datasetobj(datasetobj)
-    datasetobj.shape()
-    del X_ls, y_ls
-    (X_train, y_train,_),(X_test, y_test,_) = datasetobj([9],return_train_sets=True)
-    train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test)
-    del X_train, y_train, X_test, y_test
-    return train_loader, test_loader
 
 
 
 
 
 
-def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader = None, auto_save = None, parallel = None, **kwargs):
+
+def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader = None, parallel = None, **kwargs):
 
     # Check device setting
     if parallel == True:
@@ -113,20 +105,33 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
     while i <= end:
         print(f"Epoch {i}: ", end='')
         for b, (X_train, y_train) in enumerate(train_loader):
+
             if parallel == True:
-                X_train, y_train = X_train.cuda(), y_train.cuda() #.to(device)
+                X_train = X_train.cuda() #.to(device)
+
             print(f">", end='')
             optimizer.zero_grad()
             y_pred = model(X_train)
+
+            if parallel == True:
+                X_train = X_train.cpu()
+                del X_train
+                y_train = y_train.cuda()
+
             loss   = criterion(y_pred, y_train)
             loss.backward()
             optimizer.step()
-            del X_train, y_train, y_pred
+
+            if parallel == True:
+                y_pred = y_pred.cpu()
+                y_train = y_train.cpu()
+                del y_pred,y_train
+
         # One epoch completed
         loss = loss.tolist()
         record['train'].append(loss)
         print(f' loss: {loss} ',end='')
-        if (test_loader != None) and i%100 ==0 :
+        if (test_loader != None) and i%10 ==0 :
             acc = short_evaluation(model,test_loader,parallel)
             record['validation'].append(acc)
             print(f' accuracy: {acc}')
@@ -205,7 +210,7 @@ def seperate_dataframes(df):
     for user in df['user'].unique():
         dataframe = df[df['user']==user]
         features = dataframe[[f'amp_{i}' for i in range(1,91)]].to_numpy()
-#         features = MinMaxScaler().fit_transform(features)
+        features = MinMaxScaler().fit_transform(features)
         features_ls.append(features)
         label = dataframe[['label']].to_numpy()
         labels_ls.append(label)
@@ -213,63 +218,49 @@ def seperate_dataframes(df):
 
 # ----------------------------- helper -----------------------------------
 
-def create_datasetobject(X,y):
-    window_size = 900
-    slide_size = 200
+def create_datasetobj(X,y):
     datasetobj = DatasetObject()
     datasetobj.import_data(X, y)
+    return datasetobj
+
+
+
+def transform_datasetobj(datasetobj):
+    window_size = 900
+    slide_size = 200
     datasetobj.data_transform(lambda x,y,z : process_data.slide_augmentation(x, y, z,
                                                                 window_size=window_size,
                                                                 slide_size=slide_size,
                                                                 skip_labels=['noactivity']),axis=0)
-
-    # datasetobj.data_transform(lambda arr: arr.reshape(*arr.shape, 1),axis=1, col=0)
-    # datasetobj.data_transform(lambda arr: arr.transpose(0,3,1,2),axis=1, col=0)
     datasetobj.data_transform(lambda arr: arr.reshape(-1,window_size,3,30).transpose(0,2,3,1),axis=1, col=0)
     datasetobj.data_transform(lambda x,y,z : process_data.resampling(x, y, z, oversampling = True),axis=0)
-
     label_encoder = LabelEncoder()
     label_encoder.fit(datasetobj()[1])
     datasetobj.data_transform(lambda arr: label_encoder.transform(arr).reshape(arr.shape),axis=1, col=1)
-    datasetobj.shape()
     return datasetobj, label_encoder
+
+
+
+def prepare_exp_1():
+    fp = "E:/external_data/Experiment3/csv_files/exp_1"
+    df = import_clean_data('exp_1',fp)
+    X_ls, y_ls = seperate_dataframes(df)
+    del df
+    datasetobj = create_datasetobj(X_ls,y_ls)
+    datasetobj, label_encoder = transform_datasetobj(datasetobj)
+    datasetobj.shape()
+    del X_ls, y_ls
+    (X_train, y_train,_),(X_test, y_test,_) = datasetobj([9],return_train_sets=True)
+    train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test)
+    return train_loader, test_loader
 
 
 
 # import data
 def main():
+    train_loader, test_loader = prepare_exp_1()
+    
 
-    # 1. Import data
-    folderpath1 = "E:/external_data/Experiment3/csv_files/exp_1"
-    df_exp1 = import_experimental_data(folderpath1)
-
-    # 2. Process data
-    X_ls, y_ls = seperate_dataframes(df_exp1)
-    del df_exp1
-
-    # 3. DatasetObject
-    exp_1 = create_datasetobject(X_ls, y_ls)
-    del X_ls,y_ls
-
-    # 4. Load data into dataloaders
-    idxs = [0]
-    (X_train, y_train,_),(X_test, y_test,_) = exp_1(idxs,return_train_sets=True)
-    train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test)
-    del X_train, y_train, X_test, y_test
-
-    # 5. Build model
-    model = CNN_module(encoder=Encoder(),decoder=Classifier(1024))
-
-    # 6. criterion, optimizer
-    criterion, optimizer = setting(model)
-
-    # 7. Train
-    epochs = 100
-    model  = train(model, train_loader, criterion, optimizer, epochs)
-
-    # 8. Evalaute
-    arr = evalaute(model, test_loader)
-    print(arr)
 
     return
 
