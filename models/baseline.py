@@ -2,21 +2,15 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 # from .utils import Lambda
+from models import Lambda
 
-class Lambda(nn.Module):
-    """
-    transform tensor according to function func
-    """
-    def __init__(self, func):
-        super().__init__()
-        self.func = func
-
-    def forward(self, x):
-        return self.func(x)
 
 class Encoder(nn.Module):
     """
-    The baseline encoder take a batch of CSI spectrogram (n,1,num_frame,num_channel) and output flatten latent feature
+    The baseline encoder take a batch of CSI spectrogram (n,1,channel,timestamp) and output flatten latent feature,
+    channel = 3*30
+    timestamp > 900
+
     """
     def __init__(self):
         super(Encoder, self).__init__()
@@ -87,44 +81,23 @@ class V2(nn.Module):
         X = torch.flatten(X, 1)
         return X
 
-class Classifier(nn.Module):
-    """
-    THe baseline classifier with hidden layer {128,8}
-    """
-    def __init__(self,input_shape):
-        super(Classifier, self).__init__()
-        self.linear1 = nn.Linear(input_shape,128)
-        self.linear2 = nn.Linear(128,8)
+
+class LSTM(nn.Module)::
+    def __init__(self,seq_size,feature_size):
+        """
+        2 layer LSTM model: feature_size --> 200 --> 3
+
+        attr:
+        seq_size: length of the sequence
+        feature_size: feature size of each interval in the sequence
+        """
+        super(LSTM, self).__init__()
+        self.lstm1 = nn.LSTM(feature_size,200)
+        self.lstm2 = nn.LSTM(200,3)
+
 
     def forward(self,X):
-        X = F.dropout(F.leaky_relu(self.linear1(X)),0.1)
-        X = self.linear2(X)
+        X, _ = self.lstm1(X)
+        X, _ = self.lstm2(X)
+        X = torch.flatten(X,1)
         return X
-
-
-class CNN_module(nn.Module):
-    """
-    Combine encoder and decoder to form CNN
-    """
-    def __init__(self, encoder, decoder):
-        super(CNN_module, self).__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, X):
-        X = self.encoder(X)
-        X = self.decoder(X)
-        return X
-
-
-class Autoencoder(nn.Module):
-
-    def __init__(self, encoder, decoder):
-        super(Autoencoder, self).__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self,x):
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
