@@ -4,6 +4,8 @@ from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from data.raw_csi import import_clean_data
 from data.datasetobj import DatasetObject
 from data import process_data
+from torch import Tensor
+from torch.utils.data import TensorDataset, DataLoader
 
 
 def seperate_dataframes(df):
@@ -48,13 +50,13 @@ def create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=64, t
     return train_loader, test_loader
 
 
-def prepare_exp_1(nums=[9], window_size=900,slide_size=200,train_batch_sizes=128):
+def prepare_exp_1(nums=[9], window_size=900,slide_size=200,txr=1,oversampling=True,train_batch_sizes=128):
     fp = "E:/external_data/Experiment3/csv_files/exp_1"
     df = import_clean_data('exp_1',fp)
     X_ls, y_ls = seperate_dataframes(df)
     del df
     datasetobj = create_datasetobj(X_ls,y_ls)
-    datasetobj, label_encoder = transform_datasetobj(datasetobj,window_size,slide_size)
+    datasetobj, label_encoder = transform_datasetobj(datasetobj,window_size,slide_size,txr,oversampling)
     datasetobj.shape()
     del X_ls, y_ls
     (X_train, y_train,_),(X_test, y_test,_) = datasetobj(nums,return_train_sets=True)

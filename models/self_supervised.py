@@ -37,22 +37,6 @@ class SimCLR_TXR_model(nn.Module):
         c = self.decoder(c)
         return a,b,c
 
-
-# ----------------------------------------------------- Helper --------------------------------------------------------
-
-def build_simclr():
-    encoder = Encoder()
-    dataug = DataAugmentation(size=(1000,90))
-    n_features = [1024,128,8]
-    simclr = SimCLR(encoder=encoder, n_features=n_features, transformer=dataug)
-    return simclr,dataug
-
-def setting_(model):
-    criterion = NT_Xent(batch_size=128,temperature=0.1)
-    optimizer = torch.optim.Adam(list(model.parameters()), lr=0.003)
-    return criterion, optimizer
-
-
 # -----------------------------------------------training----------------------------------
 
 def pretrain(model, train_loader, criterion, optimizer, end, start = 1, test_loader = None, auto_save = None, parallel = None, **kwargs):

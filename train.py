@@ -12,14 +12,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from torch import Tensor, nn
 from torch.nn import functional as F
 
-root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(root_folder)
-from data import process_data
-from data.import_data import import_experimental_data, import_clean_data
-from data.datasetobj import DatasetObject
-from torchsummary import summary
-from models.baseline import Lambda, Classifier,CNN_module
-# get_ipython().run_line_magic('matplotlib', 'inline')
+# root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# sys.path.append(root_folder)
 
 
 device = torch.device("cuda:0")
