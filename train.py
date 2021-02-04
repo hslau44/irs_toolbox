@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns  # for heatmaps
 import matplotlib.pyplot as plt
+import sklearn
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 import torch
@@ -93,7 +94,21 @@ def short_evaluation(model,test_loader,parallel):
         model = model.cuda()
     return acc
 
-def evaluation(model,test_loader):
+def cmtx_table(cmtx,label_encoder=None):
+    if label_encoder != None:
+        if type(label_encoder) == sklearn.preprocessing._label.LabelEncoder:
+            cmtx = pd.DataFrame(cmtx,
+                                index=[f"actual: {i}"for i in label_encoder.classes_.tolist()],
+                                columns=[f"predict : {i}"for i in label_encoder.classes_.tolist()])
+        else:
+            cmtx = pd.DataFrame(cmtx,
+                                index=[f"actual: {i}"for i in label_encoder.categories_[0].tolist()],
+                                columns=[f"predict : {i}"for i in label_encoder.categories_[0].tolist()])
+    else:
+        cmtx = pd.DataFrame(cmtx)
+    return cmtx
+
+def evaluation(model,test_loader,label_encoder=None):
     model = model.cpu()
     with torch.no_grad():
         for X_test, y_test in test_loader:
@@ -104,16 +119,8 @@ def evaluation(model,test_loader):
     cls = pd.DataFrame(cls)
     print(cls)
     cmtx = confusion_matrix(y_test.view(-1), predicted.view(-1))
+    cmtx = cmtx_table(cmtx,label_encoder)
     return cmtx,cls
-
-def cmtx_table(cmtx,label_encoder=None):
-    if label_encoder != None:
-        cmtx = pd.DataFrame(cmtx,
-                            index=[f"actual: {i}"for i in label_encoder.categories_[0].tolist()],
-                            columns=[f"predict : {i}"for i in label_encoder.categories_[0].tolist()])
-    else:
-        cmtx = pd.DataFrame(cmtx)
-    return cmtx
 
 
 

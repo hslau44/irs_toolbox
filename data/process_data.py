@@ -222,9 +222,9 @@ def label_encode(label):
 #         print('size of DatasetObject ------ : ',self.data.shape)
 #         return
 
-def create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=64, test_batch_sizes=200):
+def create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=64, test_batch_sizes=200, num_workers=1):
     traindataset = TensorDataset(Tensor(X_train),Tensor(y_train).long())
     testdataset = TensorDataset(Tensor(X_test), Tensor(y_test).long())
-    train_loader = DataLoader(traindataset, batch_size=train_batch_sizes, shuffle=True, num_workers=1, drop_last=True)
-    test_loader = DataLoader(testdataset, batch_size=test_batch_sizes, shuffle=True, num_workers=1)
+    train_loader = DataLoader(traindataset, batch_size=train_batch_sizes, shuffle=True, num_workers=num_workers, drop_last=True)
+    test_loader = DataLoader(testdataset, batch_size=test_batch_sizes, shuffle=True, num_workers=num_workers)
     return train_loader, test_loader

@@ -49,6 +49,7 @@ def import_data(directory, columns=columns, **kwarg):
     """
     import all spectrogram in the directory
     """
+    print("Import Data")
     data = {'X':[],'y':[]}
     for label in os.listdir(directory):
         files = [directory+'/'+label+'/'+i for i in os.listdir(directory+'/'+label)]
@@ -56,5 +57,4 @@ def import_data(directory, columns=columns, **kwarg):
         y = np.full(X.shape[0], label)
         data['X'].append(X)
         data['y'].append(y)
-        print(label)
     return np.concatenate(data['X']), np.concatenate(data['y'])
