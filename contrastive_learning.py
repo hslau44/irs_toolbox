@@ -14,8 +14,8 @@ from models import ED_module, Classifier
 from losses import SupConLoss
 from train import train as finetuning
 from train import evaluation,make_directory,save_checkpoint
-from models.self_supervised import *
-
+from models.self_supervised import Projection_head
+from models.baseline import Encoder_F as Encoder
 
 # random seed
 np.random.seed(1024)
@@ -29,16 +29,16 @@ num_workers = 0
 
 # data setting
 columns = [f"col_{i+1}" for i in range(501)] # 65*501
-window_size=65
-slide_size=30
+window_size=None
+slide_size=None
 dirc = "E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data"
 PATH = 'C://Users/Creator/Script/Python/Project/irs_toolbox/' # './'
 
 # Training setting
 pre_train_epochs = 500
 fine_tune_epochs = 300
-
-exp_name = 'Encoder_64-128-512-64-7_pretrained_on_exp4csi'
+bsz = 128
+exp_name = 'Encoder_64-128-256-512-64-7_mode_clf_on_exp4csi'
 
 
 def prepare_dataloader():
@@ -46,41 +46,36 @@ def prepare_dataloader():
     X = X.reshape(*X.shape,1).transpose(0,3,1,2)
     y,lb = label_encode(y)
     X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
-    train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=128, test_batch_sizes=200, num_workers=num_workers)
+    train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=bsz, test_batch_sizes=2000, num_workers=num_workers)
     return train_loader, test_loader,lb
-
-def create_pipe():
-    # External libraries required
-    pipe = DataAugmentation((65,window_size))
-    return pipe
 
 def create_pretrain_model():
     # External libraries required
-    enc = Encoder([64,128,512])
-    clf = Projection_head(512,128,head='mlp')
+    enc = Encoder([64,128,256,512])
+    clf = Projection_head(1024,128,head='linear')
     model = ED_module(encoder=enc,decoder=clf)
     return model
 
 def create_finetune_model(enc=None):
     # External libraries required
     if enc == None:
-        enc = Encoder([64,128,512])
+        enc = Encoder([64,128,256,512])
     else:
         enc = freeze_network(enc)
-    clf = Classifier(512,64,7)
+    clf = Classifier(1024,128,6)
     model = ED_module(encoder=enc,decoder=clf)
     return model
 
 def create_criterion():
     # External libraries required
-    criterion = SupConLoss(temperature=0.1,base_temperature=0.1)
+    criterion = SupConLoss(temperature=0.1,stack=True)
     return criterion
 
 def create_optimizer(mode,model):
     if mode == 'pretrain':
         optimizer = torch.optim.SGD(list(model.parameters()), lr=0.0005)
     elif mode == 'finetuning':
-        optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0001)
+        optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
     else:
         raise ValueError("mode: {'pretrain','finetuning'}")
     return optimizer
@@ -90,20 +85,19 @@ def freeze_network(model):
         p.requires_grad = False
     return model
 
-def pretrain(model,train_loader,data_aug,optimizer,criterion,end,start=1,parallel=True):
+def pretrain(model,train_loader,optimizer,criterion,end,start=1,parallel=True):
 
     # Check device setting
     if parallel == True:
         print('GPU')
         model = model.to(device)
-        data_aug = data_aug.to(device)
 
     else:
         print('CPU')
         model = model.cpu()
 
     print('Start Training')
-    record = {'train':[],'validation':[]}
+    record = {'train':[]}
     i = start
 
     #Loop
@@ -114,25 +108,18 @@ def pretrain(model,train_loader,data_aug,optimizer,criterion,end,start=1,paralle
         for b, (X, y) in enumerate(train_loader):
 
             if parallel == True:
-
                 X = X.to(device)
-                y = y.to(device)
 
             print(f">", end='')
 
             optimizer.zero_grad()
 
-            batch_size = X.shape[0]
+            X = model(X)
 
-            X = torch.cat(data_aug(X), dim=0)
+            if parallel == True:
+                y = y.to(device)
 
-            logits = model(X)
-
-            logits = torch.split(logits, [batch_size, batch_size], dim=0)
-
-            logits = torch.cat((logits[0].unsqueeze(1),logits[1].unsqueeze(1)),dim=1)
-
-            loss = criterion(logits,y)
+            loss = criterion(X,y)
 
             loss.backward()
 
@@ -141,25 +128,14 @@ def pretrain(model,train_loader,data_aug,optimizer,criterion,end,start=1,paralle
         # One epoch completed
         l = loss.tolist()
         record['train'].append(l)
-        print(f' loss: {l} ',end='')
-
-    # if (test_loader != None) and i%100 ==0 :
-    #     acc = short_evaluation(model,test_loader,parallel)
-    #     record['validation'].append(acc)
-    #     print(f' accuracy: {acc}')
-    # else:
-        print('')
-
+        print(f' loss: {l} ')
         i += 1
 
-        del X,y,logits
+        del X,y
 
     model = model.cpu()
 
     return model,record
-
-
-
 
 def record_log(mode,epochs,record,cmtx=None,cls=None):
     if mode == 'pretrain':
@@ -185,26 +161,30 @@ def save(mode,model,optimizer,epochs):
 
 def switch(training_mode):
     """training mode = {'normal','pretrain'}"""
-    # Data
-    train_loader, test_loader, lb = prepare_dataloader()
+
     # Normal
     if training_mode == 'normal':
         finetune_model = create_finetune_model()
         criterion = nn.CrossEntropyLoss()
         optimizer = create_optimizer('finetuning',finetune_model)
+        # Data
+        train_loader, test_loader, lb = prepare_dataloader()
+        # Training
         finetune_model, record = finetuning(finetune_model , train_loader, criterion, optimizer, fine_tune_epochs, 1, test_loader, parallel)
         cmtx,cls = evaluation(finetune_model,test_loader,label_encoder=lb)
         record_log('finetuning',fine_tune_epochs,record,cmtx,cls)
         save('finetuning',finetune_model,optimizer,fine_tune_epochs)
     # Pretrain
     elif training_mode == 'pretrain':
-        data_aug = create_pipe()
         pretrain_model = create_pretrain_model()
         criterion = create_criterion()
         optimizer = create_optimizer('pretrain',pretrain_model)
-        pretrain_model, record = pretrain(pretrain_model,train_loader,data_aug,optimizer,criterion,pre_train_epochs,start=1,parallel=parallel)
+        # Data
+        train_loader, test_loader, lb = prepare_dataloader()
+        # Pretraining
+        pretrain_model, record = pretrain(pretrain_model,train_loader,optimizer,criterion,pre_train_epochs,start=1,parallel=parallel)
         record_log('pretrain',pre_train_epochs,record)
-        save('pretrain',pretrain_model,optimizer,pre_train_epochs)
+        # save('pretrain',pretrain_model,optimizer,pre_train_epochs)
         del criterion, optimizer, record
         # Fine-tuning
         finetune_model = create_finetune_model(pretrain_model.encoder)
@@ -218,14 +198,13 @@ def switch(training_mode):
 
 
 def main():
-    # Data
-    train_loader, test_loader, lb = prepare_dataloader()
-    # Pretraining
-    data_aug = create_pipe()
     pretrain_model = create_pretrain_model()
     criterion = create_criterion()
     optimizer = create_optimizer('pretrain',pretrain_model)
-    pretrain_model, record = pretrain(pretrain_model,train_loader,data_aug,optimizer,criterion,pre_train_epochs,start=1,parallel=parallel)
+    # Data
+    train_loader, test_loader, lb = prepare_dataloader()
+    # Pretraining
+    pretrain_model, record = pretrain(pretrain_model,train_loader,optimizer,criterion,pre_train_epochs,start=1,parallel=parallel)
     record_log('pretrain',pre_train_epochs,record)
     # save('pretrain',pretrain_model,optimizer,pre_train_epochs)
     del criterion, optimizer, record
