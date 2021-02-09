@@ -8,7 +8,7 @@ from torchsummary import summary
 import torchvision
 
 from data.spectrogram import import_data
-from data.process_data import label_encode, create_dataloaders
+from data.process_data import label_encode, create_dataloaders, resampling
 
 from models import ED_module, Classifier
 from losses import SupConLoss
@@ -35,17 +35,25 @@ dirc = "E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data"
 PATH = 'C://Users/Creator/Script/Python/Project/irs_toolbox/' # './'
 
 # Training setting
-pre_train_epochs = 500
-fine_tune_epochs = 300
+pre_train_epochs = 4000
+fine_tune_epochs = 200
 bsz = 128
-exp_name = 'Encoder_64-128-256-512-64-7_mode_clf_on_exp4csi'
+exp_name = 'Encoder_64-128-256-512-64-7_mode_clf_on_exp4csi_s_resampled_4000epochs'
 
+
+def prepare_data():
+    X,y  = import_data(dirc,columns=columns,window_size=window_size,slide_size=slide_size)
+    X = X.reshape(*X.shape,1).transpose(0,3,1,2)
+    y,lb = label_encode(y)
+    return X,y,lb
 
 def prepare_dataloader():
     X,y  = import_data(dirc,columns=columns,window_size=window_size,slide_size=slide_size)
     X = X.reshape(*X.shape,1).transpose(0,3,1,2)
     y,lb = label_encode(y)
     X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
+    X_train,y_train,_ = resampling(X_train,y_train,y_train,oversampling=True)
+    X_test, y_test,_ = resampling(X_test, y_test,y_test,oversampling=False)
     train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=bsz, test_batch_sizes=2000, num_workers=num_workers)
     return train_loader, test_loader,lb
 
