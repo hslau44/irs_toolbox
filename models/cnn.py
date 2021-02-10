@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from torchvision.models import resnet18
+from torchvision.models import resnet18, vgg16
 from functools import partial
-from models import Lambda
+from models import Lambda, Stack, Flatten
 
 def resnet_finetune(model, n_classes):
     """
@@ -14,6 +14,17 @@ def resnet_finetune(model, n_classes):
     for param in model.parameters():
         param.requires_grad = False
     model.fc = nn.Linear(512, n_classes)
+    return model
+
+def create_vgg16(output_size=(2,2)):
+    """
+    VGG 16 for 1 channel image, output: 512*output_size
+    """
+    mdl = vgg16()
+    model = torch.nn.Sequential(Stack(),
+                                *(list(mdl.children())[:-1]),
+                                nn.AdaptiveAvgPool2d(output_size),
+                                Flatten())
     return model
 
 # resnet18 = partial(resnet_finetune, resnet18(pretrained=True))

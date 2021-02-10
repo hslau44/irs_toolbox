@@ -19,6 +19,7 @@ from train import train as finetuning
 from train import evaluation,make_directory,save_checkpoint
 from models.self_supervised import Projection_head
 from models.baseline import Encoder_F as Encoder
+from models.cnn import create_vgg16
 
 
 # random seed
@@ -40,10 +41,10 @@ dirc_2 = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
 PATH = 'C://Users/Creator/Script/Python/Project/irs_toolbox/' # './'
 
 # Training setting
-pre_train_epochs = 1000
-fine_tune_epochs = 200
-bsz = 64
-exp_name = 'Encoder_64-128-256-512-64-7_mode_clf_on_exp4csipair'
+pre_train_epochs = 500
+fine_tune_epochs = 150
+bsz = 128
+exp_name = 'Encoder_vgg16_mode_clf_on_exp4csipair'
 
 
 def prepare_data():
@@ -93,18 +94,18 @@ def prepare_dataloader_pairdata():
 
 def create_pretrain_model():
     # External libraries required
-    enc = Encoder([64,128,256,512])
-    clf = Projection_head(1024,128,head='linear')
+    enc = create_vgg16((2,3))
+    clf = Projection_head(3072,128,head='linear')
     model = ED_module(encoder=enc,decoder=clf)
     return model
 
 def create_finetune_model(enc=None):
     # External libraries required
     if enc == None:
-        enc = Encoder([64,128,256,512])
+        enc = create_vgg16((2,3))
     else:
         enc = freeze_network(enc)
-    clf = Classifier(1024,128,6)
+    clf = Classifier(3072,128,6)
     model = ED_module(encoder=enc,decoder=clf)
     return model
 

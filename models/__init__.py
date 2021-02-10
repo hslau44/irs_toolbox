@@ -2,6 +2,13 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+class Flatten(nn.Module):
+    def forward(self, input):
+        return input.view(input.size(0), -1)
+
+class Stack(nn.Module):
+    def forward(self, x):
+        return torch.cat((x,x,x),axis=1)
 
 class Lambda(nn.Module):
     """
@@ -43,6 +50,6 @@ class Classifier(nn.Module):
 
     def forward(self,X):
         X = F.leaky_relu(self.linear1(X))
-        X = F.dropout(X,0.2)
+        X = F.dropout(X,0.1)
         X = self.linear2(X)
         return X
