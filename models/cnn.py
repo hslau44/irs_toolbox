@@ -22,7 +22,11 @@ def create_vgg16(output_size=(2,2)):
     """
     mdl = vgg16()
     model = torch.nn.Sequential(Stack(),
+<<<<<<< HEAD:models/cnn.py
                                 *(list(mdl.children())[:-2]),
+=======
+                                *(list(mdl.children())[:-1]),
+>>>>>>> 30dd0799446e5313575451dadaca9f3414a3a0d6:models/resnet.py
                                 nn.AdaptiveAvgPool2d(output_size),
                                 Flatten())
     return model
