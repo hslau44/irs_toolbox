@@ -2,6 +2,13 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+class Flatten(nn.Module):
+    def forward(self, input):
+        return input.view(input.size(0), -1)
+
+class Stack(nn.Module):
+    def forward(self, x):
+        return torch.cat((x,x,x),axis=1)
 
 class Lambda(nn.Module):
     """
