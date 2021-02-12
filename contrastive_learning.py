@@ -36,14 +36,14 @@ num_workers = 0
 columns = [f"col_{i+1}" for i in range(501)] # 65*501
 window_size=None
 slide_size=None
-dirc_local = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
-PATH = 'C://Users/Creator/Script/Python/Project/irs_toolbox/' # './'
+dirc = './data/CSI_data_pair'
+PATH = './' # './'
 
 # Training setting
-pre_train_epochs = 600
+pre_train_epochs = 800
 fine_tune_epochs = 200
 bsz = 64
-exp_name = 'Encoder_vgg16_mode_clf_on_exp4csipair'
+exp_name = 'Encoder_vgg16_mode_clf_on_exp4csipair'# 'Encoder_vgg16_mode_clf_on_exp4csipair'
 
 
 def prepare_data():
@@ -67,14 +67,14 @@ def reshape_axis1(X):
     return X.reshape(X.shape[0]*X.shape[1],1,*X.shape[2:])
 
 def prepare_dataloader_pairdata():
-    X1,X2,y = import_pair_data(dirc_2)
+    X1,X2,y = import_pair_data(dirc)
     X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
     X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)
     ### Finetuning and validation data
     X = np.concatenate((X1,X2),axis=1)
     y,lb = label_encode(y)
     y = np.concatenate((y.reshape(-1,1),y.reshape(-1,1)),axis=1)
-    X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.8, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
     # X_train,y_train,_ = resampling(X_train,y_train,y_train,oversampling=True)
     # X_test, y_test,_ = resampling(X_test, y_test,y_test,oversampling=False)
     X_train = reshape_axis1(X_train)
@@ -84,7 +84,8 @@ def prepare_dataloader_pairdata():
     X1 = X_train[::2]
     X2 = X_train[1::2]
     ### Dataloader
-    print('X_train: ',X_train.shape,'y_train: ',y_train.shape,'X_test: ',X_test.shape,'y_test: ',y_test.shape)
+    print('X1: ',X1.shape,' X2: ',X2.shape)
+    print('X_train: ',X_train.shape,' y_train: ',y_train.shape,' X_test: ',X_test.shape,' y_test: ',y_test.shape)
     pretraindataset = TensorDataset(Tensor(X1),Tensor(X2))
     finetunedataset = TensorDataset(Tensor(X_train),Tensor(y_train).long())
     validatndataset = TensorDataset(Tensor(X_test), Tensor(y_test).long())
