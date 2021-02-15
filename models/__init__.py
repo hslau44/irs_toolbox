@@ -3,8 +3,13 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 class Flatten(nn.Module):
+
+    def __init__(self, start_dim=1):
+        super().__init__()
+        self.start_dim = start_dim
+
     def forward(self, input):
-        return input.view(input.size(0), -1)
+        return torch.flatten(input,start_dim=self.start_dim)
 
 class Stack(nn.Module):
     def forward(self, x):
