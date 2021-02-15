@@ -6,7 +6,7 @@ import pandas as pd
 import seaborn as sns  # for heatmaps
 import matplotlib.pyplot as plt
 import sklearn
-from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, f1_score
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 import torch
 from torch.utils.data import DataLoader, TensorDataset
@@ -88,7 +88,8 @@ def short_evaluation(model,test_loader,parallel):
         for X_test, y_test in test_loader:
             y_val = model(X_test)
             predicted = torch.max(y_val, 1)[1]
-            acc = accuracy_score(y_test.view(-1), predicted.view(-1))
+            acc = f1_score(y_test.view(-1), predicted.view(-1),average='weighted')
+            # acc = accuracy_score(y_test.view(-1), predicted.view(-1))
     # send model back to gpu
     if parallel == True:
         model = model.cuda()
@@ -96,14 +97,9 @@ def short_evaluation(model,test_loader,parallel):
 
 def cmtx_table(cmtx,label_encoder=None):
     if label_encoder != None:
-        if type(label_encoder) == sklearn.preprocessing._label.LabelEncoder:
-            cmtx = pd.DataFrame(cmtx,
-                                index=[f"actual: {i}"for i in label_encoder.classes_.tolist()],
-                                columns=[f"predict : {i}"for i in label_encoder.classes_.tolist()])
-        else:
-            cmtx = pd.DataFrame(cmtx,
-                                index=[f"actual: {i}"for i in label_encoder.categories_[0].tolist()],
-                                columns=[f"predict : {i}"for i in label_encoder.categories_[0].tolist()])
+        cmtx = pd.DataFrame(cmtx,
+                            index=[f"actual: {i}"for i in label_encoder.classes_.tolist()],
+                            columns=[f"predict : {i}"for i in label_encoder.classes_.tolist()])
     else:
         cmtx = pd.DataFrame(cmtx)
     return cmtx
