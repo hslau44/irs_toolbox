@@ -16,6 +16,19 @@ def resnet_finetune(model, n_classes):
     model.fc = nn.Linear(512, n_classes)
     return model
 
+
+class Attention(nn.Module):
+    def __init__(self,feature_size):
+        super(Attention, self).__init__()
+        self.linear = nn.Linear(feature_size,1)
+
+    def forward(self,X):
+        assert len(X.shape) == 3
+        a = self.linear(X)
+        a = torch.relu(a)
+        a = F.softmax(a,dim=1)
+        return a*X
+
 def create_vgg16(output_size=(2,2)):
     """
     VGG 16 for 1 channel image, output: 512*output_size
@@ -25,6 +38,21 @@ def create_vgg16(output_size=(2,2)):
                                 *(list(mdl.children())[:-2]),
                                 nn.AdaptiveAvgPool2d(output_size),
                                 Flatten())
+    return model
+
+
+def create_vgg16_atn(output_size=(2,2)):
+    """
+    VGG 16 for 1 channel image, with linear attention, output: 512*output_size
+    """
+    mdl = vgg16()
+    model = torch.nn.Sequential(Stack(),
+                                *(list(mdl.children())[:-2]),
+                                nn.AdaptiveAvgPool2d(output_size),
+                                Flatten(2),
+                                Attention(output_size[0]*output_size[1]),
+                                Flatten(1)
+                                )
     return model
 
 # resnet18 = partial(resnet_finetune, resnet18(pretrained=True))
