@@ -228,3 +228,11 @@ def create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=64, t
     train_loader = DataLoader(traindataset, batch_size=train_batch_sizes, shuffle=True, num_workers=num_workers, drop_last=True)
     test_loader = DataLoader(testdataset, batch_size=test_batch_sizes, shuffle=True, num_workers=num_workers)
     return train_loader, test_loader
+
+
+def selections(*arg,**kwarg):
+    size = int(arg[0].shape[0]*kwarg['p'])
+    index = np.arange(0,arg[0].shape[0])
+    test_selection = np.random.choice(index,size,replace=False)
+    train_selection = np.array([i for i in index if i not in test_selection])
+    return [i[train_selection] for i in arg],[i[test_selection] for i in arg]
