@@ -9,9 +9,8 @@ from torch.nn import functional as F
 from torchsummary import summary
 import torchvision
 
-from data.spectrogram import import_data
-from data.spectrogram import import_pair_data
-from data.process_data import label_encode, create_dataloaders, resampling
+from data.spectrogram import import_data,import_pair_data,import_CsiPwr_data
+from data.process_data import label_encode, create_dataloaders, resampling,selections
 
 from models import ED_module, Classifier
 from losses import SupConLoss, NT_Xent
@@ -33,60 +32,74 @@ parallel = True
 num_workers = 0
 
 # data setting
-columns = [f"col_{i+1}" for i in range(501)] # 65*501
-window_size=None
-slide_size=None
-dirc = './data/CSI_data_pair'
+loc_dirc = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_PWR_pair'
+remote_dirc = './data/CSI_data_pair'
 PATH = './' # './'
 
-# Training setting
-pre_train_epochs = 800
-fine_tune_epochs = 200
+dirc = loc_dirc
+mode = 2
+p = None
+resample = None
+pre_train_epochs = 1
+fine_tune_epochs = 1
 bsz = 64
-exp_name = 'Encoder_vgg16_mode_clf_on_exp4csipair'# 'Encoder_vgg16_mode_clf_on_exp4csipair'
+parallel = False
+exp_name = 'Encoder_vgg16_mode_clf_on_exp4csipair'
 
 
-def prepare_data():
-    X,y  = import_data(dirc,columns=columns,window_size=window_size,slide_size=slide_size)
+def prepare_data(dirc):
+    X,y  = import_data(dirc)
     X = X.reshape(*X.shape,1).transpose(0,3,1,2)
     y,lb = label_encode(y)
     return X,y,lb
 
-def prepare_dataloader():
-    X,y  = import_data(dirc,columns=columns,window_size=window_size,slide_size=slide_size)
-    X = X.reshape(*X.shape,1).transpose(0,3,1,2)
-    y,lb = label_encode(y)
+def prepare_dataloader(dirc,resample=None,train_batch_sizes=bsz):
+    X,y,lb = prepare_data(dirc)
     X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
-    X_train,y_train,_ = resampling(X_train,y_train,y_train,oversampling=True)
-    # X_test, y_test,_ = resampling(X_test, y_test,y_test,oversampling=False)
-    train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=bsz, test_batch_sizes=2000, num_workers=num_workers)
+    if resample:
+        X_train,y_train,_ = resampling(X_train,y_train,y_train,oversampling=True)
+        X_test, y_test,_ = resampling(X_test, y_test,y_test,oversampling=False)
+    train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=train_batch_sizes, test_batch_sizes=2000, num_workers=num_workers)
     return train_loader, test_loader,lb
 
 def reshape_axis1(X):
+    """
+    To be depreciated
+    """
     assert len(X.shape) > 1, 'must be two dimensional'
     return X.reshape(X.shape[0]*X.shape[1],1,*X.shape[2:])
 
-def prepare_dataloader_pairdata():
-    X1,X2,y = import_pair_data(dirc)
+def prepare_dataloader_pairdata(dirc,mode,p=None,resample=None):
+    """
+    Import pair data
+    """
+    if mode == 1:
+        X1,X2,y = import_pair_data(dirc)
+    elif mode == 2:
+        X1,X2,y = import_CsiPwr_data(dirc)
+    else:
+        raise ValueError('Must be 1 or 2 for pair')
+
     X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
     X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)
-    ### Finetuning and validation data
-    X = np.concatenate((X1,X2),axis=1)
     y,lb = label_encode(y)
-    y = np.concatenate((y.reshape(-1,1),y.reshape(-1,1)),axis=1)
-    X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
-    # X_train,y_train,_ = resampling(X_train,y_train,y_train,oversampling=True)
-    # X_test, y_test,_ = resampling(X_test, y_test,y_test,oversampling=False)
-    X_train = reshape_axis1(X_train)
-    y_train = y_train.reshape(-1)
-    X_test = reshape_axis1(X_test)
-    y_test = y_test.reshape(-1)
-    X1 = X_train[::2]
-    X2 = X_train[1::2]
+
+    training,validation = selections(X1,X2,y,p=0.2)
+    X_test, y_test = validation[0],validation[2]
+
+    if p:
+        (X_train,y_train) , _ = selections(training[0],training[2],p=p)
+    else:
+        X_train,y_train = training[0],training[2]
+
+    if resample:
+        X_train,y_train,_ = resampling(X_train,y_train,y_train,oversampling=True)
+        # X_test, y_test,_ = resampling(X_test, y_test,y_test,oversampling=False)
+
     ### Dataloader
-    print('X1: ',X1.shape,' X2: ',X2.shape)
+    print('X1: ',training[0].shape,' X2: ',training[1].shape)
     print('X_train: ',X_train.shape,' y_train: ',y_train.shape,' X_test: ',X_test.shape,' y_test: ',y_test.shape)
-    pretraindataset = TensorDataset(Tensor(X1),Tensor(X2))
+    pretraindataset = TensorDataset(Tensor(training[0]),Tensor(training[1]))
     finetunedataset = TensorDataset(Tensor(X_train),Tensor(y_train).long())
     validatndataset = TensorDataset(Tensor(X_test), Tensor(y_test).long())
     pretrain_loader = DataLoader(pretraindataset, batch_size=bsz, shuffle=True, num_workers=num_workers, drop_last=True)
@@ -94,20 +107,21 @@ def prepare_dataloader_pairdata():
     validatn_loader = DataLoader(validatndataset, batch_size=2000, shuffle=True, num_workers=num_workers)
     return pretrain_loader, finetune_loader, validatn_loader, lb
 
-def create_pretrain_model():
+
+def create_pretrain_model(out_size=(2,3)):
     # External libraries required
-    enc = create_vgg16((2,3))
-    clf = Projection_head(3072,128,head='linear')
+    enc = create_vgg16(out_size)
+    clf = Projection_head(512*out_size[0]*out_size[1],128,head='linear')
     model = ED_module(encoder=enc,decoder=clf)
     return model
 
-def create_finetune_model(enc=None):
+def create_finetune_model(enc=None,out_size=(2,3)):
     # External libraries required
     if enc == None:
-        enc = create_vgg16((2,3))
+        enc = create_vgg16(out_size)
     else:
         enc = freeze_network(enc)
-    clf = Classifier(3072,128,6)
+    clf = Classifier(512*out_size[0]*out_size[1],128,6)
     model = ED_module(encoder=enc,decoder=clf)
     return model
 
@@ -116,13 +130,18 @@ def create_criterion():
     criterion = NT_Xent(bsz, temperature=0.1, world_size=1)
     return criterion
 
-def create_optimizer(mode,model):
+
+def create_optimizer(mode,model1,model2=None):
+    """mode: {'pretrain','pretrain_2','finetuning'}"""
     if mode == 'pretrain':
-        optimizer = torch.optim.SGD(list(model.parameters()), lr=0.0005)
+        optimizer = torch.optim.SGD(list(model1.parameters()), lr=0.0005)
+    elif mode == 'pretrain_2':
+        optimizer = torch.optim.SGD(list(model1.parameters())+list(model2.parameters()), lr=0.0005)
     elif mode == 'finetuning':
-        optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
+        optimizer = torch.optim.Adam(list(model1.parameters()), lr=0.0005)
     else:
-        raise ValueError("mode: {'pretrain','finetuning'}")
+        raise ValueError("mode: {'pretrain','pretrain_2','finetuning'}")
+
     return optimizer
 
 def freeze_network(model):
@@ -130,7 +149,8 @@ def freeze_network(model):
         p.requires_grad = False
     return model
 
-def pretrain(model,train_loader,optimizer,criterion,end,start=1,parallel=True):
+
+def pretrain(model,train_loader,optimizer,criterion,end,start=1,model2=None,parallel=True):
 
     # Check device setting
     if parallel == True:
@@ -164,7 +184,10 @@ def pretrain(model,train_loader,optimizer,criterion,end,start=1,parallel=True):
             if parallel == True:
                 X2 = X2.to(device)
 
-            X2 = model(X2)
+            if model2:
+                X2 = model2(X2)
+            else:
+                X2 = model(X2)
 
             loss = criterion(X1,X2)
 
@@ -183,6 +206,7 @@ def pretrain(model,train_loader,optimizer,criterion,end,start=1,parallel=True):
     model = model.cpu()
 
     return model,record
+
 
 def record_log(mode,epochs,record,cmtx=None,cls=None):
     if mode == 'pretrain':
@@ -206,57 +230,24 @@ def save(mode,model,optimizer,epochs):
     return
 
 
-def switch(training_mode):
-    """training mode = {'normal','pretrain'}"""
-
-    # Normal
-    if training_mode == 'normal':
-        finetune_model = create_finetune_model()
-        criterion = nn.CrossEntropyLoss()
-        optimizer = create_optimizer('finetuning',finetune_model)
-        # Data
-        _ , train_loader, test_loader, lb = prepare_dataloader_pairdata()
-        # Training
-        finetune_model, record = finetuning(finetune_model , train_loader, criterion, optimizer, fine_tune_epochs, 1, test_loader, parallel)
-        cmtx,cls = evaluation(finetune_model,test_loader,label_encoder=lb)
-        record_log('finetuning',fine_tune_epochs,record,cmtx,cls)
-        save('finetuning',finetune_model,optimizer,fine_tune_epochs)
-    # Pretrain
-    elif training_mode == 'pretrain':
-        pretrain_model = create_pretrain_model()
-        criterion = create_criterion()
-        optimizer = create_optimizer('pretrain',pretrain_model)
-        # Data
-        pretrain_loader, finetune_loader, validatn_loader, lb = prepare_dataloader_pairdata()
-        # Pretraining
-        pretrain_model, record = pretrain(pretrain_model,pretrain_loader,optimizer,criterion,pre_train_epochs,start=1,parallel=parallel)
-        record_log('pretrain',pre_train_epochs,record)
-        # save('pretrain',pretrain_model,optimizer,pre_train_epochs)
-        del criterion, optimizer, record, pretrain_loader
-        # Fine-tuning
-        finetune_model = create_finetune_model(pretrain_model.encoder)
-        criterion = nn.CrossEntropyLoss()
-        optimizer = create_optimizer('finetuning',finetune_model)
-        finetune_model, record = finetuning(finetune_model , finetune_loader, criterion, optimizer, fine_tune_epochs, 1, validatn_loader, parallel)
-        cmtx,cls = evaluation(finetune_model,validatn_loader,label_encoder=lb)
-        record_log('finetuning',fine_tune_epochs,record,cmtx,cls)
-        save('finetuning',finetune_model,optimizer,fine_tune_epochs)
-    return
-
-
 def main():
-    pretrain_model = create_pretrain_model()
+    csi_model = create_pretrain_model(out_size=(2,2))
+    pwr_model = create_pretrain_model(out_size=(3,1))
     criterion = create_criterion()
-    optimizer = create_optimizer('pretrain',pretrain_model)
+    optimizer = create_optimizer('pretrain_2',csi_model,pwr_model)
     # Data
-    pretrain_loader, finetune_loader, validatn_loader, lb = prepare_dataloader_pairdata()
+    pretrain_loader, finetune_loader, validatn_loader, lb = prepare_dataloader_pairdata(dirc,mode,p,resample)
     # Pretraining
-    pretrain_model, record = pretrain(pretrain_model,pretrain_loader,optimizer,criterion,pre_train_epochs,start=1,parallel=parallel)
+    csi_model, record = pretrain(csi_model,pretrain_loader,optimizer,criterion,pre_train_epochs,
+                                 start=1,
+                                 model2=pwr_model,
+                                 parallel=parallel)
+    # save and log
     record_log('pretrain',pre_train_epochs,record)
-    save('pretrain',pretrain_model,optimizer,pre_train_epochs)
+    save('pretrain',csi_model,optimizer,pre_train_epochs)
     del criterion, optimizer, record, pretrain_loader
     # Fine-tuning
-    finetune_model = create_finetune_model(pretrain_model.encoder)
+    finetune_model = create_finetune_model(csi_model.encoder)
     criterion = nn.CrossEntropyLoss()
     optimizer = create_optimizer('finetuning',finetune_model)
     finetune_model, record = finetuning(finetune_model , finetune_loader, criterion, optimizer, fine_tune_epochs, 1, validatn_loader, parallel)
