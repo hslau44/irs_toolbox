@@ -39,15 +39,15 @@ PATH = './' # './'
 dirc = remote_dirc
 mode = 2
 p = None
-resample = None
-pre_train_epochs = 1
-fine_tune_epochs = 1
+resample = True
+pre_train_epochs = 800
+fine_tune_epochs = 300
 bsz = 64
 parallel = True
-csi_out_size = (2,2)
-pwr_out_size = (3,1)
+csi_out_size = (2,3)
+pwr_out_size = (3,2)
 
-exp_name = 'test'#'Encoder_vgg16_mode_clf_on_exp4csipair'
+exp_name = 'Encoder_vgg16_mode_clf_on_exp4csipwr_s_resample'#'Encoder_vgg16_mode_clf_on_exp4csipwr'
 
 
 def prepare_data(dirc):
