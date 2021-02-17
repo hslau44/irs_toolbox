@@ -76,6 +76,7 @@ def import_pair_data(directory):
     """
     import all spectrogram (in pair) in the directory
     """
+    
     print("Importing Data ",end='')
     data = {'X1':[],'X2':[],'y':[]}
     for label in os.listdir(directory):

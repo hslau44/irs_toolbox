@@ -33,18 +33,21 @@ num_workers = 0
 
 # data setting
 loc_dirc = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_PWR_pair'
-remote_dirc = './data/CSI_data_pair'
+remote_dirc = './data/csi_pwr'
 PATH = './' # './'
 
-dirc = loc_dirc
+dirc = remote_dirc
 mode = 2
 p = None
 resample = None
 pre_train_epochs = 1
 fine_tune_epochs = 1
 bsz = 64
-parallel = False
-exp_name = 'Encoder_vgg16_mode_clf_on_exp4csipair'
+parallel = True
+csi_out_size = (2,2)
+pwr_out_size = (3,1)
+
+exp_name = 'test'#'Encoder_vgg16_mode_clf_on_exp4csipair'
 
 
 def prepare_data(dirc):
@@ -156,6 +159,9 @@ def pretrain(model,train_loader,optimizer,criterion,end,start=1,model2=None,para
     if parallel == True:
         print('GPU')
         model = model.to(device)
+        
+        if model2:
+            model2 = model2.to(device)
 
     else:
         print('CPU')
@@ -231,8 +237,8 @@ def save(mode,model,optimizer,epochs):
 
 
 def main():
-    csi_model = create_pretrain_model(out_size=(2,2))
-    pwr_model = create_pretrain_model(out_size=(3,1))
+    csi_model = create_pretrain_model(csi_out_size)
+    pwr_model = create_pretrain_model(pwr_out_size)
     criterion = create_criterion()
     optimizer = create_optimizer('pretrain_2',csi_model,pwr_model)
     # Data
@@ -247,7 +253,7 @@ def main():
     save('pretrain',csi_model,optimizer,pre_train_epochs)
     del criterion, optimizer, record, pretrain_loader
     # Fine-tuning
-    finetune_model = create_finetune_model(csi_model.encoder)
+    finetune_model = create_finetune_model(csi_model.encoder,csi_out_size)
     criterion = nn.CrossEntropyLoss()
     optimizer = create_optimizer('finetuning',finetune_model)
     finetune_model, record = finetuning(finetune_model , finetune_loader, criterion, optimizer, fine_tune_epochs, 1, validatn_loader, parallel)
