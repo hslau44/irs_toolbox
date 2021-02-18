@@ -34,7 +34,9 @@ num_workers = 0
 # data setting
 loc_dirc = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_PWR_pair'
 remote_dirc = './data/csi_pwr'
-PATH = './' # './'
+PATH = '.' # './'
+EXP_NAME = 'Encoder_vgg16_mode_clf_on_exp4csipwr_s_resample'
+
 
 dirc = remote_dirc
 mode = 2
@@ -46,8 +48,6 @@ bsz = 64
 parallel = True
 csi_out_size = (2,3)
 pwr_out_size = (3,2)
-
-exp_name = 'Encoder_vgg16_mode_clf_on_exp4csipwr_s_resample'#'Encoder_vgg16_mode_clf_on_exp4csipwr'
 
 
 def prepare_data(dirc):
@@ -128,6 +128,7 @@ def create_finetune_model(enc=None,out_size=(2,3)):
     model = ED_module(encoder=enc,decoder=clf)
     return model
 
+
 def create_criterion():
     # External libraries required
     criterion = NT_Xent(bsz, temperature=0.1, world_size=1)
@@ -159,7 +160,7 @@ def pretrain(model,train_loader,optimizer,criterion,end,start=1,model2=None,para
     if parallel == True:
         print('GPU')
         model = model.to(device)
-        
+
         if model2:
             model2 = model2.to(device)
 
@@ -216,25 +217,37 @@ def pretrain(model,train_loader,optimizer,criterion,end,start=1,model2=None,para
 
 def record_log(mode,epochs,record,cmtx=None,cls=None):
     if mode == 'pretrain':
-        path = make_directory(exp_name+'_pretrain',epoch=epochs,filepath=PATH+'record/')
+        path = make_directory(EXP_NAME+'_pretrained',epoch=epochs,filepath=PATH+'/record/')
         pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
     elif mode == 'finetuning':
-        path = make_directory(exp_name+'_finetuning',epoch=epochs,filepath=PATH+'record/')
+        path = make_directory(EXP_NAME+'_finetuned',epoch=epochs,filepath=PATH+'/record/')
         pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
         pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
         cls.to_csv(path+'_report.csv')
         cmtx.to_csv(path+'_cmtx.csv')
     return
 
+
 def save(mode,model,optimizer,epochs):
     if mode == 'pretrain':
-        path = make_directory(exp_name+'_pretrain',epoch=epochs,filepath=PATH+'models/saved_models/')
+        path = make_directory(EXP_NAME+'_pretrained',epoch=epochs,filepath=PATH+'/models/saved_models/')
         save_checkpoint(model, optimizer, epochs, path)
     elif mode == 'finetuning':
-        path = make_directory(exp_name+'_finetuning',epoch=epochs,filepath=PATH+'models/saved_models/')
+        path = make_directory(EXP_NAME+'_finetuned',epoch=epochs,filepath=PATH+'/models/saved_models/')
         save_checkpoint(model, optimizer, epochs, path)
     return
 
+
+def switch(m):
+    pretrain_loader, finetune_loader, validatn_loader, lb = prepare_dataloader_pairdata(dirc,mode,p,resample)
+    if m == 'pretrain':
+        finetune_model = create_finetune_model(None,csi_out_size)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = create_optimizer('finetuning',finetune_model)
+        finetune_model, record = finetuning(finetune_model , finetune_loader, criterion, optimizer, fine_tune_epochs, 1, validatn_loader, parallel)
+        cmtx,cls = evaluation(finetune_model,validatn_loader,label_encoder=lb)
+        record_log('finetuning',fine_tune_epochs,record,cmtx,cls)
+    return
 
 def main():
     csi_model = create_pretrain_model(csi_out_size)
