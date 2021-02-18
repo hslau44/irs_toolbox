@@ -35,19 +35,19 @@ num_workers = 0
 loc_dirc = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_PWR_pair'
 remote_dirc = './data/csi_pwr'
 PATH = '.' # './'
-EXP_NAME = 'Encoder_vgg16_mode_clf_on_exp4csipwr_s_resample'
+EXP_NAME = 'Encoder_vgg16_mode_normal_on_exp4_s_resample_regularize'
 
 
 dirc = remote_dirc
 mode = 2
 p = None
 resample = True
-pre_train_epochs = 800
+pre_train_epochs = 1600
 fine_tune_epochs = 300
 bsz = 64
 parallel = True
 csi_out_size = (2,3)
-pwr_out_size = (3,2)
+pwr_out_size = (3,1)
 
 
 def prepare_data(dirc):
@@ -238,16 +238,17 @@ def save(mode,model,optimizer,epochs):
     return
 
 
-def switch(m):
+def normal():
+    print('normal:  epoch:',300)
     pretrain_loader, finetune_loader, validatn_loader, lb = prepare_dataloader_pairdata(dirc,mode,p,resample)
-    if m == 'pretrain':
-        finetune_model = create_finetune_model(None,csi_out_size)
-        criterion = nn.CrossEntropyLoss()
-        optimizer = create_optimizer('finetuning',finetune_model)
-        finetune_model, record = finetuning(finetune_model , finetune_loader, criterion, optimizer, fine_tune_epochs, 1, validatn_loader, parallel)
-        cmtx,cls = evaluation(finetune_model,validatn_loader,label_encoder=lb)
-        record_log('finetuning',fine_tune_epochs,record,cmtx,cls)
+    finetune_model = create_finetune_model(None,csi_out_size)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(list(finetune_model.parameters()), lr=0.0005)
+    finetune_model, record = finetuning(finetune_model , finetune_loader, criterion, optimizer, 300, 1, validatn_loader, parallel, regularize=True)
+    cmtx,cls = evaluation(finetune_model,validatn_loader,label_encoder=lb)
+    record_log('finetuning',fine_tune_epochs,record,cmtx,cls)
     return
+
 
 def main():
     csi_model = create_pretrain_model(csi_out_size)

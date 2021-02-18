@@ -17,15 +17,24 @@ from torch.nn import functional as F
 # sys.path.append(root_folder)
 
 
-device = torch.device("cuda:0")
-torch.cuda.set_device(device)
+#device = torch.device("cuda:0")
+#torch.cuda.set_device(device)
 
 np.random.seed(1024)
 torch.manual_seed(1024)
 
 
+def reg_loss(model,factor=0.0005,parallel=None):
+    if parallel:
+        l2_reg = torch.tensor(0.).cuda()
+    else:
+        l2_reg = torch.tensor(0.)
+    for param in model.parameters():
+        l2_reg += torch.norm(param)
+    return factor * l2_reg
 
-def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader = None, parallel = None, **kwargs):
+
+def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader = None, parallel = None, regularize = None, **kwargs):
 
     # Check device setting
     if parallel == True:
@@ -54,7 +63,12 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
                 del X_train
                 y_train = y_train.cuda()
 
-            loss   = criterion(y_pred, y_train)
+            loss = criterion(y_pred, y_train)
+            
+            if regularize:
+                loss += reg_loss(model,parallel=parallel)
+                
+            
             loss.backward()
             optimizer.step()
 
