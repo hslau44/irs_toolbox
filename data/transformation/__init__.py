@@ -8,6 +8,8 @@ from torch import Tensor
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import LabelEncoder
 
+# ---------------------------------sub------------------------------------------
+
 def major_vote_(arr, impurity_threshold=0.01):
     counter = Counter(list(arr.reshape(-1)))
     lowest_impurity = float(counter.most_common()[-1][-1]/arr.shape[0])
@@ -32,6 +34,9 @@ def resampling_(arr,oversampling=True):
         idx_ls.append([*series[series==item].sample(n=number_of_sample,replace=replace).index])
     idx_ls = np.array(idx_ls).reshape(-1,)
     return idx_ls
+
+
+# ---------------------------------main------------------------------------------
 
 def where(*arrays,condition):
     """select item in multi arrays based on condition"""
@@ -89,9 +94,15 @@ def resampling(*arrays,labels,oversampling=True):
     new_arrays = [arr[idx_ls] for arr in arrays]
     return new_arrays
 
+# ---------------------------------helper------------------------------------------
 
 def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
-    return np.array(data['X']),np.array(data['y']), z
+    X, y, z = slide(X, y, z, window_size=window_size, slide_size=slide_size)
+    y = major_vote(y,impurity=0.01)
+    if skip_labels != None:
+        for lb in skip_labels:
+            X, y, z = where(X, y, z, condition=(y!=lb))
+    return X, y, z
 
 def stacking(x):
     """Increase channel dimension from 1 to 3"""
@@ -112,10 +123,6 @@ def breakpoints(ls):
         if ls[i+1] != ls[i]:
             points.append(i)
     return points
-
-
-
-
 
 def selections(*arg,**kwarg):
     size = int(arg[0].shape[0]*kwarg['p'])
