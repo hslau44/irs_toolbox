@@ -34,43 +34,6 @@ def major_vote(arr,impurity=0.01):
         new_arr[i] = major_vote_(arr[i],impurity)
     return new_arr
 
-
-def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
-    """ Data augmentation, create sample by sliding
-    Arg:
-    features: numpy.ndarray. Must have same size as labels in the first axis
-    labels: numpy.ndarray. Must have same size as features in the first axis
-    z: numpy.ndarray. data label in Datasetobj
-    window_size: int. Create a sample with size equal to window_size
-    slide_size: int. Create a sample for each slide_size in the first axis
-    skip_labels: list. The labels that should be skipped
-
-    Return:
-    X: np.ndarray. Augmented features
-    y: np.ndarray. Augmented labels
-    z: np.ndarray. z
-    """
-    assert X.shape[0] == y.shape[0]
-
-    data = {'X':[],'y':[]}
-
-    for i in range(0, X.shape[0] -window_size+1, slide_size):
-
-        label = major_vote(y[i:i+window_size], impurity_threshold=0.01)
-
-        if (skip_labels != None) and (label in skip_labels):
-
-            continue
-
-        else:
-
-            data['X'].append(X[i:i+window_size])
-
-            data['y'].append(label)
-
-    return np.array(data['X']),np.array(data['y']), z
-
-
 def slide(*arrays, window_size, slide_size):
     """
     slide the 0 axis of the arrays to create new data with window_size
@@ -101,6 +64,10 @@ def slide(*arrays, window_size, slide_size):
     return new_arrays
 
 
+
+def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
+    return np.array(data['X']),np.array(data['y']), z
+
 def stacking(x):
     """Increase channel dimension from 1 to 3"""
 
@@ -121,7 +88,7 @@ def breakpoints(ls):
             points.append(i)
     return points
 
-def index_resampling(arr,oversampling=True):
+def resampling_(arr,oversampling=True):
     """Return a list of index after resampling from array"""
     series = pd.Series(arr.reshape(-1))
     value_counts = series.value_counts()
@@ -137,11 +104,14 @@ def index_resampling(arr,oversampling=True):
     idx_ls = np.array(idx_ls).reshape(-1,)
     return idx_ls
 
-def resampling(X,y,z,oversampling=True):
+def resampling(*arrays,labels,oversampling=True):
     """Resampling argument"""
-    idx_ls = index_resampling(y,oversampling)
-    X,y,z = shuffle(X[idx_ls],y[idx_ls],z[idx_ls])
-    return X,y,z
+
+    idx_ls = resampling_(labels,oversampling)
+
+    new_arrays = [arr[idx_ls] for arr in arrays]
+
+    return new_arrays
 
 def selections(*arg,**kwarg):
     size = int(arg[0].shape[0]*kwarg['p'])
