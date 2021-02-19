@@ -9,7 +9,16 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import LabelEncoder
 
 
-def major_vote(arr, impurity_threshold=0.01):
+def major_vote_(arr, impurity_threshold=0.01):
+    counter = Counter(list(arr.reshape(-1)))
+    lowest_impurity = float(counter.most_common()[-1][-1]/arr.shape[0])
+    if lowest_impurity > impurity_threshold:
+        result = counter.most_common()[-1][0]
+    else:
+        result = counter.most_common()[0][0]
+    return result
+
+def major_vote(arr,impurity=0.01):
     """ find the element that has the majority portion in the array, depending on the threshold
 
     Args:
@@ -19,17 +28,11 @@ def major_vote(arr, impurity_threshold=0.01):
     Return:
     result: the element that has the majority portion in the array, depending on the threshold
     """
-    counter = Counter(list(arr.reshape(-1)))
-    lowest_impurity = float(counter.most_common()[-1][-1]/arr.shape[0])
-    if lowest_impurity > impurity_threshold:
-        result = counter.most_common()[-1][0]
-    else:
-        result = counter.most_common()[0][0]
-    return result
-
-def major_vote2(arr):
-    for a in arr:
-        a = major_vote(a)
+    assert len(arr.shape) == 2, "must have only 2 dimension"
+    new_arr = np.zeros(arr.shape[0])
+    for i in range(len(arr)):
+        new_arr[i] = major_vote_(arr[i],impurity)
+    return new_arr
 
 
 def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
