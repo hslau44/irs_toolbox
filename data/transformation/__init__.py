@@ -8,7 +8,6 @@ from torch import Tensor
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import LabelEncoder
 
-
 def major_vote_(arr, impurity_threshold=0.01):
     counter = Counter(list(arr.reshape(-1)))
     lowest_impurity = float(counter.most_common()[-1][-1]/arr.shape[0])
@@ -18,21 +17,25 @@ def major_vote_(arr, impurity_threshold=0.01):
         result = counter.most_common()[0][0]
     return result
 
-def major_vote(arr,impurity=0.01):
-    """ find the element that has the majority portion in the array, depending on the threshold
+def resampling_(arr,oversampling=True):
+    """Return a list of index after resampling from array"""
+    series = pd.Series(arr.reshape(-1))
+    value_counts = series.value_counts()
+    if oversampling == True:
+        number_of_sample = value_counts.max()
+        replace = True
+    else:
+        number_of_sample = value_counts.min()
+        replace = False
+    idx_ls = []
+    for item in value_counts.index:
+        idx_ls.append([*series[series==item].sample(n=number_of_sample,replace=replace).index])
+    idx_ls = np.array(idx_ls).reshape(-1,)
+    return idx_ls
 
-    Args:
-    arr: np.ndarray. The target array
-    impurity_threshold: float. If array contain a portion of other elemnets and they are higher than the threshold, the function return element with the smallest portion.
-
-    Return:
-    result: the element that has the majority portion in the array, depending on the threshold
-    """
-    assert len(arr.shape) == 2, "must have only 2 dimension"
-    new_arr = np.zeros(arr.shape[0])
-    for i in range(len(arr)):
-        new_arr[i] = major_vote_(arr[i],impurity)
-    return new_arr
+def where(*arrays,condition):
+    """select item in multi arrays based on condition"""
+    return [arr[np.where(condition)] for arr in arrays]
 
 def slide(*arrays, window_size, slide_size):
     """
@@ -63,6 +66,28 @@ def slide(*arrays, window_size, slide_size):
 
     return new_arrays
 
+def major_vote(arr,impurity=0.01):
+    """ find the element that has the majority portion in the array, depending on the threshold
+
+    Args:
+    arr: np.ndarray. The target array
+    impurity_threshold: float. If array contain a portion of other elemnets and they are higher than the threshold, the function return element with the smallest portion.
+
+    Return:
+    result: the element that has the majority portion in the array, depending on the threshold
+    """
+    assert len(arr.shape) == 2, "must have only 2 dimension"
+    new_arr = np.zeros(arr.shape[0])
+    for i in range(len(arr)):
+        new_arr[i] = major_vote_(arr[i],impurity)
+    return new_arr
+
+def resampling(*arrays,labels,oversampling=True):
+    """Resampling argument"""
+
+    idx_ls = resampling_(labels,oversampling)
+    new_arrays = [arr[idx_ls] for arr in arrays]
+    return new_arrays
 
 
 def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
@@ -88,30 +113,9 @@ def breakpoints(ls):
             points.append(i)
     return points
 
-def resampling_(arr,oversampling=True):
-    """Return a list of index after resampling from array"""
-    series = pd.Series(arr.reshape(-1))
-    value_counts = series.value_counts()
-    if oversampling == True:
-        number_of_sample = value_counts.max()
-        replace = True
-    else:
-        number_of_sample = value_counts.min()
-        replace = False
-    idx_ls = []
-    for item in value_counts.index:
-        idx_ls.append([*series[series==item].sample(n=number_of_sample,replace=replace).index])
-    idx_ls = np.array(idx_ls).reshape(-1,)
-    return idx_ls
 
-def resampling(*arrays,labels,oversampling=True):
-    """Resampling argument"""
 
-    idx_ls = resampling_(labels,oversampling)
 
-    new_arrays = [arr[idx_ls] for arr in arrays]
-
-    return new_arrays
 
 def selections(*arg,**kwarg):
     size = int(arg[0].shape[0]*kwarg['p'])
