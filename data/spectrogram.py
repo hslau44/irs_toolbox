@@ -14,26 +14,6 @@ def csv_to_arr(path):
     arr = pd.read_csv(path, header=None).to_numpy()
     return arr
 
-def sliding(arr,window_size=None,slide_size=None):
-    """
-    Slide augmentation over time
-
-    Argument:
-    array(np.ndarray): orignial array from single csv file
-    window_size(int): window size
-    slide_size(int): slide size
-
-    Return:
-    array (number of augmeted data,*,window_size)
-    """
-    mat = []
-    if (window_size == None) or (slide_size == None):
-        window_size = arr.shape[1]
-        slide_size = arr.shape[1]
-    for i in range(0, arr.shape[1]-window_size+1, slide_size):
-        mat.append(arr[:,i:i+window_size])
-    return np.array(mat)
-
 def normalize_arr(arr,axis=0):
     if axis == 0:
         arr = MinMaxScaler().fit_transform(arr)
@@ -76,7 +56,7 @@ def import_pair_data(directory):
     """
     import all spectrogram (in pair) in the directory
     """
-    
+
     print("Importing Data ",end='')
     data = {'X1':[],'X2':[],'y':[]}
     for label in os.listdir(directory):
