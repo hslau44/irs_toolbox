@@ -10,11 +10,12 @@ class NT_Xent(nn.Module):
     NT_Xent for SimCLR. Work created by Spijkervet
     """
 
-    def __init__(self, batch_size, temperature, world_size=1):
+    def __init__(self, batch_size, temperature, world_size=1,device='cuda'):
         super(NT_Xent, self).__init__()
         self.batch_size = batch_size
         self.temperature = temperature
         self.world_size = world_size
+        self.device = device
 
         self.mask = self.mask_correlated_samples(batch_size, world_size)
         self.criterion = nn.CrossEntropyLoss(reduction="sum")
@@ -52,8 +53,8 @@ class NT_Xent(nn.Module):
         )
         negative_samples = sim[self.mask].reshape(N, -1)
 
-        labels = torch.zeros(N).long().cuda()
         logits = torch.cat((positive_samples, negative_samples), dim=1)
+        labels = torch.zeros(N).long().to(logits.device)
         loss = self.criterion(logits, labels)
         loss /= N
         return loss
