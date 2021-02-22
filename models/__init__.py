@@ -21,7 +21,7 @@ def freeze_network(model):
         p.requires_grad = False
     return model
 
-def create_finetune_model(enc=None,out_size=(2,3)):
+def create_model(enc=None,out_size=(2,3)):
     # External libraries required
     if enc == None:
         enc = create_vgg16(out_size)
