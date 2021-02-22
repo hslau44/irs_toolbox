@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-
+from models.utils import *
 
 
 class SI_Encoder(nn.Module):

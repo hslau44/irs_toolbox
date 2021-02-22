@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torchvision.models import resnet18, vgg16
 from functools import partial
-from models import Lambda, Stack, Flatten
+from models.utils import *
 
 def resnet_finetune(model, n_classes):
     """

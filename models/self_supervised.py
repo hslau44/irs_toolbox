@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torchsummary import summary
 import torchvision
-from models import Lambda
+from models.utils import *
 
 
 class DataAugmentation(nn.Module):

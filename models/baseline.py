@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 # from .utils import Lambda
-from models import Lambda
+from models.utils import *
 
 
 class V1(nn.Module):
