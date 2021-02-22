@@ -128,28 +128,6 @@ from torch.utils.data import DataLoader, TensorDataset
 #         return pretrain_loader, finetune_loader, validatn_loader, lb
 
 
-def create_pretrain_model(out_size=(2,3)):
-    # External libraries required
-    enc = create_vgg16(out_size)
-    clf = Projection_head(512*out_size[0]*out_size[1],128,head='linear')
-    model = ED_module(encoder=enc,decoder=clf)
-    return model
-
-def freeze_network(model):
-    for _, p in model.named_parameters():
-        p.requires_grad = False
-    return model
-
-def create_finetune_model(enc=None,out_size=(2,3)):
-    # External libraries required
-    if enc == None:
-        enc = create_vgg16(out_size)
-    else:
-        enc = freeze_network(enc)
-    clf = Classifier(512*out_size[0]*out_size[1],128,6)
-    model = ED_module(encoder=enc,decoder=clf)
-    return model
-
 def create_criterion(batch_size):
     # External libraries required
     criterion = NT_Xent(batch_size, temperature=0.1, world_size=1)
