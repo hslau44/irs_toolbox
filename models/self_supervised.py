@@ -51,8 +51,10 @@ class SimCLR(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self,Views):
-        for i in len(range(Views)):
-            Views[i] = self.encoder(Views[i])
-            Views[i] = self.decoder(Views[i])
-        return Views
+    def forward(self,t):
+        batch_size = t[0].shape[0]
+        t = torch.cat(t,dim=0)
+        t = self.encoder(t)
+        t = self.decoder(t)
+        t = torch.split(t,batch_size,dim=0)
+        return t
