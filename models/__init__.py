@@ -26,9 +26,16 @@ def add_SimCLR(enc,out_size):
     return model
 
 
-def add_finetune(enc,out_size,freeze=True):
+def add_classifier(enc,out_size,freeze):
     if freeze == True:
         enc = freeze_network(enc)
     clf = Classifier(out_size,128,6)
     model = ED_module(encoder=enc,decoder=clf)
+    return model
+
+
+def create_baseline():
+    out = 96
+    enc = Encoder([32,64,out])
+    model = add_classifier(enc,out_size=10*out,freeze=False)
     return model
