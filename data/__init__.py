@@ -70,7 +70,7 @@ def prepare_single_source(directory,axis=3,train_size=0.8,sampling='weight',batc
         class_weight = torch.FloatTensor([1-w for w in pd.Series(y_train).value_counts(normalize=True).sort_index().tolist()])
     ### dataloader
     train_loader = create_dataloader(X_train,label=y_train,batch_size=batch_size,num_workers=num_workers)
-    test_loader  = create_dataloader(X_test,label=y_test,batch_size=2000,num_workers=num_workers)
+    test_loader  = create_dataloader(X_test,label=y_test,batch_size=y_test.shape[0],num_workers=num_workers)
     ### Report
     print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
     print("class: ",lb.classes_)
