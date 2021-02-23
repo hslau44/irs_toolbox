@@ -28,26 +28,26 @@ class LSTM(nn.Module):
 
 class Encoder(nn.Module):
     """
-    Encoder for spectrogram (1,65,65), 3 layer
+    Three layer Encoder for spectrogram (1,65,501), 3 layer
     """
     def __init__(self,num_filters):
         super(Encoder, self).__init__()
         l1,l2,l3 = num_filters
         ### 1st ###
-        self.conv1 = nn.Conv2d(1,l1,kernel_size=5,stride=2)
-        self.norm1 = nn.BatchNorm2d(l1)
+        self.conv1 = nn.Conv2d(1,l1,kernel_size=5,stride=1)
+        self.norm1 = nn.BatchNorm2d(l1) # nn.BatchNorm2d()
         self.actv1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
         ### 2nd ###
-        self.conv2 = nn.Conv2d(l1,l2,kernel_size=3,stride=2)
+        self.conv2 = nn.Conv2d(l1,l2,kernel_size=4,stride=2)
         self.norm2 = nn.BatchNorm2d(l2)
         self.actv2 = nn.ReLU()
-        self.pool2 = Lambda(lambda x:x) # nn.MaxPool2d(kernel_size=(2,2))
+        self.pool2 = nn.MaxPool2d(kernel_size=(2,2))
         ### 3rd ###
-        self.conv3 = nn.Conv2d(l2,l3,kernel_size=2,stride=2)
+        self.conv3 = nn.Conv2d(l2,l3,kernel_size=3,stride=3)
         self.norm3 = Lambda(lambda x:x)
         self.actv3 = nn.Tanh()
-        self.pool3 = nn.AvgPool2d(kernel_size=(2,2))
+        self.pool3 = nn.MaxPool2d(kernel_size=(2,2))
 
     def forward(self,X):
         X = self.pool1(self.actv1(self.norm1(self.conv1(X))))
@@ -57,36 +57,6 @@ class Encoder(nn.Module):
         # print(X.shape)
         return X
 
-class Encoder_T(nn.Module):
-    """
-    Three layer Encoder for spectrogram (1,65,65), 3 layer
-    """
-    def __init__(self,num_filters):
-        super(Encoder_T, self).__init__()
-        l1,l2,l3 = num_filters
-        ### 1st ###
-        self.conv1 = nn.Conv2d(1,l1,kernel_size=5,stride=2)
-        self.norm1 = nn.BatchNorm2d(l1)
-        self.actv1 = nn.ReLU()
-        self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
-        ### 2nd ###
-        self.conv2 = nn.Conv2d(l1,l2,kernel_size=3,stride=2)
-        self.norm2 = nn.BatchNorm2d(l2)
-        self.actv2 = nn.ReLU()
-        self.pool2 = Lambda(lambda x:x) # nn.MaxPool2d(kernel_size=(2,2))
-        ### 3rd ###
-        self.conv3 = nn.Conv2d(l2,l3,kernel_size=2,stride=2)
-        self.norm3 = Lambda(lambda x:x)
-        self.actv3 = nn.Tanh()
-        self.pool3 = nn.AvgPool2d(kernel_size=(2,2))
-
-    def forward(self,X):
-        X = self.pool1(self.actv1(self.norm1(self.conv1(X))))
-        X = self.pool2(self.actv2(self.norm2(self.conv2(X))))
-        X = self.pool3(self.actv3(self.norm3(self.conv3(X))))
-        X = torch.flatten(X, 1)
-        # print(X.shape)
-        return X
 
 
 
