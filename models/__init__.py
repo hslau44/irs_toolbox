@@ -9,32 +9,26 @@ from models.cnn import *
 from models.self_supervised import *
 from models.utils import *
 
-def create_pretrain_model(out_size=(2,3)):
-    # External libraries required
-    enc = create_vgg16(out_size)
-    clf = Projection_head(512*out_size[0]*out_size[1],128,head='linear')
-    model = ED_module(encoder=enc,decoder=clf)
-    return model
 
 def freeze_network(model):
     for _, p in model.named_parameters():
         p.requires_grad = False
     return model
 
-def create_model(enc=None,out_size=(2,3)):
-    # External libraries required
-    if enc == None:
-        enc = create_vgg16(out_size)
-    else:
-        enc = freeze_network(enc)
-    clf = Classifier(512*out_size[0]*out_size[1],128,6)
-    model = ED_module(encoder=enc,decoder=clf)
+
+def add_SimCLR(enc,out_size):
+    """
+    enc: encoder(nn.Module)
+    out_size: output size of encoder
+    """
+    clf = Projection_head(out_size,128,head='linear')
+    model = SimCLR(enc,clf)
     return model
 
 
-def create_model_SimCLR(out_size=(2,3)):
-    # External libraries required
-    enc = create_vgg16(out_size)
-    clf = Projection_head(512*out_size[0]*out_size[1],128,head='linear')
-    model = SimCLR(enc,clf)
+def add_finetune(enc,out_size,freeze=True):
+    if freeze == True:
+        enc = freeze_network(enc)
+    clf = Classifier(out_size,128,6)
+    model = ED_module(encoder=enc,decoder=clf)
     return model
