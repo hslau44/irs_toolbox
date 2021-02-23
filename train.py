@@ -14,17 +14,23 @@ from torch import Tensor, nn
 from torch.nn import functional as F
 
 
+from models.utils import Lambda,Classifier,ED_module
+from data import prepare_double_source,prepare_single_source
+
+
+
 
 
 np.random.seed(1024)
 torch.manual_seed(1024)
 
-DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
-NUM_EPOCHS = 300
+DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data'
+NUM_EPOCHS = 100
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = DEVICE
 PATH = '.'
 NUM_WORKERS = 0
+MAIN_NAME = 'Trainmode_normal_Network_shallowv2_Data_exp4nuc1'
 
 torch.cuda.set_device(DEVICE)
 
@@ -162,13 +168,13 @@ def load_checkpoint(model,optimizer,filepath):
 
 
 
-def record_log(main_name,epochs,record,cmtx=None,cls=None):
+def record_log(main_name,epochs,record,cmtx='None',cls='None'):
     path = make_directory(main_name,epoch=epochs,filepath=PATH+'/record/')
     pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
-    if cmtx:
+    if type(cmtx) != str:
         pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
         cmtx.to_csv(path+'_cmtx.csv')
-    if cls:
+    if type(cls) != str:
         cls.to_csv(path+'_report.csv')
     return
 
@@ -178,24 +184,58 @@ def save(main_name,model,optimizer,epochs):
     return
 
 
+class Encoder(nn.Module):
+    """
+    Three layer Encoder for spectrogram (1,65,65), 3 layer
+    """
+    def __init__(self,num_filters):
+        super(Encoder, self).__init__()
+        l1,l2,l3 = num_filters
+        ### 1st ###
+        self.conv1 = nn.Conv2d(1,l1,kernel_size=5,stride=1)
+        self.norm1 = nn.BatchNorm2d(l1) # nn.BatchNorm2d()
+        self.actv1 = nn.ReLU()
+        self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
+        ### 2nd ###
+        self.conv2 = nn.Conv2d(l1,l2,kernel_size=4,stride=2)
+        self.norm2 = nn.BatchNorm2d(l2)
+        self.actv2 = nn.ReLU()
+        self.pool2 = nn.MaxPool2d(kernel_size=(2,2))
+        ### 3rd ###
+        self.conv3 = nn.Conv2d(l2,l3,kernel_size=3,stride=3)
+        self.norm3 = Lambda(lambda x:x)
+        self.actv3 = nn.Tanh()
+        self.pool3 = nn.MaxPool2d(kernel_size=(2,2))
 
-# ----------------------------------------------------------------------------------------
+    def forward(self,X):
+        X = self.pool1(self.actv1(self.norm1(self.conv1(X))))
+        X = self.pool2(self.actv2(self.norm2(self.conv2(X))))
+        X = self.pool3(self.actv3(self.norm3(self.conv3(X))))
+        X = torch.flatten(X, 1)
+        # print(X.shape)
+        return X
+
+def create_model():
+    out = 96
+    enc = Encoder([32,64,out]) # 1440
+    # summary(enc,(1,65,501),batch_size=64)
+    dec = Classifier(10*out,128,6)
+    model = ED_module(enc,dec)
+    return model
+# -----------------------------------Main-------------------------------------------
 
 
 
 def main():
-    model = create_model(enc=None,out_size=(2,2))
-    criterion = nn.CrossEntropyLoss()
+    model = create_model()
+    train_loader,test_loader,lb,class_weight = prepare_single_source(directory=DIRC,
+                                                                     axis=3,
+                                                                     train_size=0.8,
+                                                                     sampling='weight',
+                                                                     batch_size=64,
+                                                                     num_workers=NUM_WORKERS)
+    criterion = nn.CrossEntropyLoss(weight=class_weight).to(DEVICE)
     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
-    _ , train_loader, test_loader, lb = prepare_double_source(directory=DIRC,
-                                                              modality='single',
-                                                              axis=1,
-                                                              train_size=0.8,
-                                                              joint='joint',
-                                                              p=None,
-                                                              resample=None,
-                                                              batch_size=64,
-                                                              num_workers=NUM_WORKERS)
     model, record = train(model=model,
                           train_loader=train_loader,
                           criterion=criterion,
@@ -206,8 +246,8 @@ def main():
                           device = DEVICE,
                           regularize = None)
     cmtx,cls = evaluation(model,test_loader,label_encoder=lb)
-    record_log(main_name,epochs,record,cmtx=None,cls=None)
-    save(main_name,model,optimizer,epochs)
+    record_log(MAIN_NAME,NUM_EPOCHS,record,cmtx=cmtx,cls=cls)
+    save(MAIN_NAME,model,optimizer,NUM_EPOCHS)
     return
 
 
