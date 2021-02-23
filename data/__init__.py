@@ -49,7 +49,7 @@ def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
     return dataloader
 
 
-def prepare_single_source(directory,axis=3,train_size=0.8,resample=None,batch_size=64,num_workers=0):
+def prepare_single_source(directory,axis=3,train_size=0.8,sampling='weight',batch_size=64,num_workers=0):
     ### import data
     X,y = import_data(directory)
     ### add and transpose axis
@@ -63,19 +63,25 @@ def prepare_single_source(directory,axis=3,train_size=0.8,resample=None,batch_si
     X,y = shuffle(X,y)
     X_train, X_test, y_train, y_test = train_test_split(X,y,train_size=train_size)
     ### resample
-    if resample:
+    if sampling == 'resampling':
         X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=True)
         X_test, y_test = resampling(X_test, y_test, labels=y_test,oversampling=False)
+    elif sampling == 'weight':
+        class_weight = torch.FloatTensor([1-w for w in pd.Series(y_train).value_counts(normalize=True).sort_index().tolist()])
     ### dataloader
     train_loader = create_dataloader(X_train,label=y_train,batch_size=batch_size,num_workers=num_workers)
     test_loader  = create_dataloader(X_test,label=y_test,batch_size=2000,num_workers=num_workers)
     ### Report
     print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
     print("class: ",lb.classes_)
-    return train_loader,test_loader,lb
+    if sampling == 'weight':
+        print("class_size: ",1-class_weight)
+        return train_loader,test_loader,lb,class_weight
+    else:
+        return train_loader,test_loader,lb
 
 
-def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,joint='first',p=None,resample=None,batch_size=64,num_workers=0):
+def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,joint='first',p=None,sampling='weight',batch_size=64,num_workers=0):
     """
     Import data with pair source, this is either csi-csi (multi-view) or csi-pwr (multi-modality)
 
@@ -131,10 +137,12 @@ def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,join
     ### select finetune data
     if p:
         X_train, _ , y_train, _ = train_test_split(X_train,y_train,train_size=p)
-    ### resample
-    if resample:
+    ### sampling
+    if sampling == 'resampling':
         X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=True)
         X_test, y_test = resampling(X_test, y_test, labels=y_test,oversampling=False)
+    elif sampling == 'weight':
+        class_weight = torch.FloatTensor([1-w for w in pd.Series(y_train).value_counts(normalize=True).sort_index().tolist()])
     ### dataloader
     pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
     finetune_loader = create_dataloader(X_train,label=y_train,batch_size=batch_size,num_workers=num_workers)
@@ -143,7 +151,11 @@ def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,join
     print('X1_train: ',X1_train.shape,'\tX2_train: ',X2_train.shape)
     print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
     print("class: ",lb.classes_)
-    return pretrain_loader, finetune_loader, validatn_loader, lb
+    if sampling == 'weight':
+        print("class_size: ",1-class_weight)
+        return pretrain_loader, finetune_loader, validatn_loader, lb, class_weight
+    else:
+        return pretrain_loader, finetune_loader, validatn_loader, lb
 
 # def prepare_data(mode,directory):
 #     # pair data
