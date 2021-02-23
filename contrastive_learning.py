@@ -18,23 +18,6 @@ np.random.seed(1024)
 torch.manual_seed(1024)
 
 # gpu setting
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-torch.cuda.set_device(device)
-parallel = True
-num_workers = 0
-
-# data setting
-loc_dirc = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data'
-remote_dirc = './data/csi_pwr'
-PATH = '.' # './'
-EXP_NAME = 'Encoder_vgg16_mode_normal_on_exp4_s_resample_regularize'
-
-
-# random seed
-np.random.seed(1024)
-torch.manual_seed(1024)
-
-# gpu setting
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = DEVICE
 torch.cuda.set_device(DEVICE)
@@ -153,6 +136,6 @@ def main():
     record_log(MAIN_NAME,FINETUNE_EPOCHS,record,cmtx=cmtx,cls=cls)
     save(MAIN_NAME,model,optimizer,FINETUNE_EPOCHS)
     return
- 
+
 if __name__ == '__main__':
     main()
