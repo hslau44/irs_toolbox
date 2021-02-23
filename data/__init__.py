@@ -146,7 +146,7 @@ def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,join
     ### dataloader
     pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
     finetune_loader = create_dataloader(X_train,label=y_train,batch_size=batch_size,num_workers=num_workers)
-    validatn_loader  = create_dataloader(X_test,label=y_test,batch_size=2000,num_workers=num_workers)
+    validatn_loader  = create_dataloader(X_test,label=y_test,batch_size=y_test.shape[0],num_workers=num_workers)
     ### Report
     print('X1_train: ',X1_train.shape,'\tX2_train: ',X2_train.shape)
     print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
