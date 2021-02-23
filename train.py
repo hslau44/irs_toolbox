@@ -3,8 +3,6 @@ import sys
 from time import gmtime, strftime
 import numpy as np
 import pandas as pd
-import seaborn as sns  # for heatmaps
-import matplotlib.pyplot as plt
 import sklearn
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, f1_score
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
@@ -13,11 +11,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from torch import Tensor, nn
 from torch.nn import functional as F
 
-
-from models.utils import Lambda,Classifier,ED_module
-from data import prepare_double_source,prepare_single_source
-
-
+from data import prepare_single_source
+from models import create_baseline
 
 
 
@@ -166,8 +161,6 @@ def load_checkpoint(model,optimizer,filepath):
 
 # -----------------------------------------helper---------------------------------------
 
-
-
 def record_log(main_name,epochs,record,cmtx='None',cls='None'):
     path = make_directory(main_name,epoch=epochs,filepath=PATH+'/record/')
     pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
@@ -183,51 +176,56 @@ def save(main_name,model,optimizer,epochs):
     save_checkpoint(model, optimizer, epochs, path)
     return
 
+# ---------------------------------------fast model setup-------------------------------------------
 
-class Encoder(nn.Module):
-    """
-    Three layer Encoder for spectrogram (1,65,65), 3 layer
-    """
-    def __init__(self,num_filters):
-        super(Encoder, self).__init__()
-        l1,l2,l3 = num_filters
-        ### 1st ###
-        self.conv1 = nn.Conv2d(1,l1,kernel_size=5,stride=1)
-        self.norm1 = nn.BatchNorm2d(l1) # nn.BatchNorm2d()
-        self.actv1 = nn.ReLU()
-        self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
-        ### 2nd ###
-        self.conv2 = nn.Conv2d(l1,l2,kernel_size=4,stride=2)
-        self.norm2 = nn.BatchNorm2d(l2)
-        self.actv2 = nn.ReLU()
-        self.pool2 = nn.MaxPool2d(kernel_size=(2,2))
-        ### 3rd ###
-        self.conv3 = nn.Conv2d(l2,l3,kernel_size=3,stride=3)
-        self.norm3 = Lambda(lambda x:x)
-        self.actv3 = nn.Tanh()
-        self.pool3 = nn.MaxPool2d(kernel_size=(2,2))
+from models.baseline import Encoder,Classifier
+from models.utils import Lambda,ED_module
+from models import add_classifier
 
-    def forward(self,X):
-        X = self.pool1(self.actv1(self.norm1(self.conv1(X))))
-        X = self.pool2(self.actv2(self.norm2(self.conv2(X))))
-        X = self.pool3(self.actv3(self.norm3(self.conv3(X))))
-        X = torch.flatten(X, 1)
-        # print(X.shape)
-        return X
+# class Encoder(nn.Module):
+#     """
+#     Three layer Encoder for spectrogram (1,65,65), 3 layer
+#     """
+#     def __init__(self,num_filters):
+#         super(Encoder, self).__init__()
+#         l1,l2,l3 = num_filters
+#         ### 1st ###
+#         self.conv1 = nn.Conv2d(1,l1,kernel_size=5,stride=1)
+#         self.norm1 = nn.BatchNorm2d(l1) # nn.BatchNorm2d()
+#         self.actv1 = nn.ReLU()
+#         self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
+#         ### 2nd ###
+#         self.conv2 = nn.Conv2d(l1,l2,kernel_size=4,stride=2)
+#         self.norm2 = nn.BatchNorm2d(l2)
+#         self.actv2 = nn.ReLU()
+#         self.pool2 = nn.MaxPool2d(kernel_size=(2,2))
+#         ### 3rd ###
+#         self.conv3 = nn.Conv2d(l2,l3,kernel_size=3,stride=3)
+#         self.norm3 = Lambda(lambda x:x)
+#         self.actv3 = nn.Tanh()
+#         self.pool3 = nn.MaxPool2d(kernel_size=(2,2))
+#
+#     def forward(self,X):
+#         X = self.pool1(self.actv1(self.norm1(self.conv1(X))))
+#         X = self.pool2(self.actv2(self.norm2(self.conv2(X))))
+#         X = self.pool3(self.actv3(self.norm3(self.conv3(X))))
+#         X = torch.flatten(X, 1)
+#         # print(X.shape)
+#         return X
 
-def create_model():
+def create_baseline():
     out = 96
-    enc = Encoder([32,64,out]) # 1440
-    # summary(enc,(1,65,501),batch_size=64)
-    dec = Classifier(10*out,128,6)
-    model = ED_module(enc,dec)
+    enc = Encoder([32,64,out])
+    model = add_classifier(enc,out_size=10*out,freeze=False)
     return model
+
+
 # -----------------------------------Main-------------------------------------------
 
 
 
 def main():
-    model = create_model()
+    model = create_baseline()
     train_loader,test_loader,lb,class_weight = prepare_single_source(directory=DIRC,
                                                                      axis=3,
                                                                      train_size=0.8,
