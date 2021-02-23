@@ -5,22 +5,6 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-# from torch import Tensor
-# from torch.utils.data import DataLoader, TensorDataset
-# from torch.nn import functional as F
-# from torchsummary import summary
-# import torchvision
-#
-#
-#
-# from models import ED_module, Classifier
-# from losses import SupConLoss, NT_Xent
-# from train import train as finetuning
-# from train import evaluation,make_directory,save_checkpoint
-# from models.self_supervised import Projection_head
-# from models.baseline import Encoder_F as Encoder
-# from models.cnn import create_vgg16
-
 
 # random seed
 np.random.seed(1024)
@@ -50,109 +34,96 @@ parallel = True
 csi_out_size = (2,3)
 pwr_out_size = (3,1)
 
-from data import prepare_single_source,prepare_double_source
-from data.spectrogram import import_data, import_pair_data, import_CsiPwr_data
-from data.transformation import label_encode,resampling
-from sklearn.model_selection import train_test_split
-from torch import Tensor
-from torch.utils.data import DataLoader, TensorDataset
+from data import prepare_double_source
+from models import add_SimCLR,add_classifier
+from models.baseline import Encoder as Baseline_Encoder
+from models.cnn import create_vgg16
+from losses import NT_Xent
+from train import train
 
 
-def create_criterion(batch_size):
-    # External libraries required
-    criterion = NT_Xent(batch_size, temperature=0.1, world_size=1)
-    return criterion
-
-def create_optimizer(mode,model):
-    optimizer = torch.optim.SGD(list(model.parameters()), lr=0.0005)
-    # double # optimizer = torch.optim.SGD(list(model1.parameters())+list(model2.parameters()), lr=0.0005)
-    return optimizer
-
-
-
-def contrastive_pretraining(model,train_loader,optimizer,criterion,end,start=1,model2=None,parallel=True):
+def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device = None):
     # Check device setting
-    if parallel == True:
-        print('GPU')
+    if device:
         model = model.to(device)
-
-        if model2:
-            model2 = model2.to(device)
-
-    else:
-        print('CPU')
-        model = model.cpu()
+        criterion = criterion.to(device)
 
     print('Start Training')
     record = {'train':[]}
     i = start
-
     #Loop
     while i <= end:
-
         print(f"Epoch {i}: ", end='')
+        for b, (items) in enumerate(train_loader):
 
-        for b, (X1, X2) in enumerate(train_loader):
+            if device:
+                items = [i.to(device) for i in items]
 
             print(f">", end='')
 
             optimizer.zero_grad()
 
-            if parallel == True:
-                X1 = X1.to(device)
+            items = model(*items)
 
-            X1 = model(X1)
-
-            if parallel == True:
-                X2 = X2.to(device)
-
-            if model2:
-                X2 = model2(X2)
-            else:
-                X2 = model(X2)
-
-            loss = criterion(X1,X2)
+            loss = criterion(*items)
 
             loss.backward()
-
             optimizer.step()
 
         # One epoch completed
-        l = loss.tolist()
-        record['train'].append(l)
-        print(f' loss: {l} ')
+        loss = loss.tolist()
+        record['train'].append(loss)
+        print(f' loss: {loss} ',end='')
+
         i += 1
 
-        del X1,X2
+    if device:
+        items = [i.cpu() for i in items]
+        del items
+        model = model.cpu()
 
-    model = model.cpu()
+    return model, record
 
-    return model,record
 
-def record_log(mode,epochs,record,cmtx=None,cls=None):
-    if mode == 'pretraining':
-        path = make_directory(EXP_NAME+'_pretrained',epoch=epochs,filepath=PATH+'/record/')
-        pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
-    elif mode == 'finetuning':
-        path = make_directory(EXP_NAME+'_finetuned',epoch=epochs,filepath=PATH+'/record/')
-        pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
-        pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
-        cls.to_csv(path+'_report.csv')
-        cmtx.to_csv(path+'_cmtx.csv')
-    return
-
-def save(mode,model,optimizer,epochs):
-    if mode == 'pretrain':
-        path = make_directory(EXP_NAME+'_pretrained',epoch=epochs,filepath=PATH+'/models/saved_models/')
-        save_checkpoint(model, optimizer, epochs, path)
-    elif mode == 'finetuning':
-        path = make_directory(EXP_NAME+'_finetuned',epoch=epochs,filepath=PATH+'/models/saved_models/')
-        save_checkpoint(model, optimizer, epochs, path)
-    return
+def create_encoder():
+    outsize = 960
+    encoder = Baseline_Encoder([32,64,96])
+    return encoder, outsize
 
 
 def main():
-    X,y,lb = prepare_data(dirc)
+    encoder, outsize = create_encoder()
+    model = add_SimCLR(enc,out_size)
+    pretrain_loader, finetune_loader, validatn_loader, lb, class_weight = prepare_double_source(directory,
+                                                                                                modality='single',
+                                                                                                axis=1,
+                                                                                                train_size=0.8,
+                                                                                                joint='first',
+                                                                                                p=None,
+                                                                                                sampling='weight',
+                                                                                                batch_size=64,
+                                                                                                num_workers=0)
+    criterion = NT_Xent(batch_size, temperature=0.1, world_size=1)
+    optimizer = torch.optim.SGD(list(model.parameters()), lr=0.0005)
+    model, record = contrastive_pretraining(model,train_loader,optimizer,criterion,end,start=1,model2=None,parallel=True)
+    record_log(MAIN_NAME,NUM_EPOCHS,record)
+    del criterion,optimizer,pretrain_loader
+    # Finetuning
+    model = add_classifier(enc,out_size,freeze=True)
+    criterion = nn.CrossEntropyLoss(weight=class_weight).to(DEVICE)
+    optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
+    model, record = train(model=model,
+                          train_loader=finetune_loader,
+                          criterion=criterion,
+                          optimizer=optimizer,
+                          end=NUM_EPOCHS,
+                          start = 1,
+                          test_loader = validatn_loader,
+                          device = DEVICE,
+                          regularize = None)
+    cmtx,cls = evaluation(model,validatn_loader,label_encoder=lb)
+    record_log(MAIN_NAME,NUM_EPOCHS,record,cmtx=cmtx,cls=cls)
+    save(MAIN_NAME,model,optimizer,NUM_EPOCHS)
     return
 
 if __name__ == '__main__':
