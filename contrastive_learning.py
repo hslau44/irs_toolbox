@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 from data import prepare_double_source
-from models import add_SimCLR,add_classifier
+from models import add_SimCLR,add_classifier,add_SimCLR_multi
 from models.baseline import Encoder as Baseline_Encoder
 from models.cnn import create_vgg16
 from losses import NT_Xent
@@ -24,25 +24,35 @@ torch.cuda.set_device(DEVICE)
 
 ### data setting
 # DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
-DIRC = './data/CSI_data_pair'
-MODALITY='dummy'
+DIRC = './data/CSI_PWR'
+MODALITY='double'
 AXIS=1
 TRAIN_SIZE=0.8
-JOINT='joint'
+JOINT='second'
 PER=None
 SAMPLING='weight'
 
 ### train setting
 BATCH_SIZE=64
-NUM_WORKERS = 0
-TEMPERATURE=0.1
-REGULARIZE = None
+NUM_WORKERS = 4
+TEMPERATURE= 0.1
+REGULARIZE = False
 PRETRAIN_EPOCHS = 0
-FINETUNE_EPOCHS = 10
-MAIN_NAME = 'TEST'#'Trainmode_simclr_Network_shallowv2_Data_exp4nuc1'
-OUT_PATH = None # '.'
+FREEZE=False
+FINETUNE_EPOCHS = 300
+MAIN_NAME = 'Trainmode-normal_Network-vgg16_Data-exp4csipwr-2' #'TEST'
+OUT_PATH = '.' # None #    
+
+
+m = MODALITY
 output = OUT_PATH
 
+if PRETRAIN_EPOCHS > 0:
+    FREEZE=True
+    
+    
+    
+print('----------------------EXP ',16,'----------------------')
 
 
 def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device = None):
@@ -76,7 +86,7 @@ def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device =
         # One epoch completed
         loss = loss.tolist()
         record['train'].append(loss)
-        print(f' loss: {loss} ',end='')
+        print(f' loss: {loss} ')
 
         i += 1
 
@@ -89,17 +99,30 @@ def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device =
 
 
 def create_encoder():
-    outsize = 960
-    encoder = Baseline_Encoder([32,64,96])
+#     outsize = 960
+#     encoder = Baseline_Encoder([32,64,96])
+#     outsize = 1920
+#     encoder = Baseline_Encoder([64,128,192])
+    encoder = create_vgg16((2,2))
+    outsize = 512*2*2
     return encoder, outsize
 
-
-
+def create_encoders():
+    outsize = 512*3*1
+    encoder = create_vgg16((3,1))
+    outsize2 = 512*2*2
+    encoder2 = create_vgg16((2,2))
+    return encoder,encoder2,outsize,outsize2
 
 
 def main():
-    encoder, outsize = create_encoder()
-    model = add_SimCLR(encoder,outsize)
+    
+    if m == 'single':
+        encoder, outsize = create_encoder()
+        model = add_SimCLR(encoder,outsize)
+    elif m == 'double':
+        encoder,encoder2,outsize,outsize2 = create_encoders()
+        model = add_SimCLR_multi(encoder,encoder2,outsize,outsize2)
     pretrain_loader, finetune_loader, validatn_loader, lb, class_weight = prepare_double_source(directory=DIRC,
                                                                                                 modality=MODALITY,
                                                                                                 axis=AXIS,
@@ -124,7 +147,7 @@ def main():
             record_log(MAIN_NAME,PRETRAIN_EPOCHS,record,filepath=OUT_PATH+'/record/')
     del criterion,optimizer,pretrain_loader
     # Finetuning
-    model = add_classifier(model.encoder,outsize,freeze=True)
+    model = add_classifier(model.encoder,outsize,freeze=FREEZE)
     criterion = nn.CrossEntropyLoss(weight=class_weight).to(DEVICE)
     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
     model, record = train(model=model,

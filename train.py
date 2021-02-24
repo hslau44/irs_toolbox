@@ -16,23 +16,39 @@ from models import create_baseline
 
 
 
+#####################################################################################################################
+
+# random seed
 np.random.seed(1024)
 torch.manual_seed(1024)
 
-DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data'
-NUM_EPOCHS = 100
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# gpu setting
+DEVICE = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 device = DEVICE
-PATH = '.'
-NUM_WORKERS = 0
-MAIN_NAME = 'Trainmode_normal_Network_shallowv2_Data_exp4nuc1'
-
 torch.cuda.set_device(DEVICE)
 
+### data setting
+# DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
+DIRC = './data/CSI_data'
+AXIS=1
+TRAIN_SIZE=0.8
+SAMPLING='weight'
+
+### train setting
+BATCH_SIZE=64
+NUM_WORKERS = 0
+REGULARIZE = None
+NUM_EPOCHS = 100
+MAIN_NAME = 'TEST'#'Trainmode_simclr_Network_shallowv2_Data_exp4nuc1'
+OUT_PATH = None # '.'
+output = OUT_PATH
 
 
-def reg_loss(model,factor=0.0005):
-    l2_reg = torch.tensor(0.).to(model.device)
+#####################################################################################################################
+
+
+def reg_loss(model,device,factor=0.0005):
+    l2_reg = torch.tensor(0.).to(device)
     for param in model.parameters():
         l2_reg += torch.norm(param)
     return factor * l2_reg
@@ -182,6 +198,7 @@ from models.baseline import Encoder,Classifier
 from models.utils import Lambda,ED_module
 from models import add_classifier
 
+
 # class Encoder(nn.Module):
 #     """
 #     Three layer Encoder for spectrogram (1,65,65), 3 layer
@@ -213,11 +230,11 @@ from models import add_classifier
 #         # print(X.shape)
 #         return X
 
-def create_baseline():
-    out = 96
-    enc = Encoder([32,64,out])
-    model = add_classifier(enc,out_size=10*out,freeze=False)
-    return model
+# def create_baseline():
+#     out = 96
+#     enc = Encoder([32,64,out])
+#     model = add_classifier(enc,out_size=10*out,freeze=False)
+#     return model
 
 
 # -----------------------------------Main-------------------------------------------
@@ -227,10 +244,10 @@ def create_baseline():
 def main():
     model = create_baseline()
     train_loader,test_loader,lb,class_weight = prepare_single_source(directory=DIRC,
-                                                                     axis=3,
-                                                                     train_size=0.8,
-                                                                     sampling='weight',
-                                                                     batch_size=64,
+                                                                     axis=AXIS,
+                                                                     train_size=TRAIN_SIZE,
+                                                                     sampling=SAMPLING,
+                                                                     batch_size=BATCH_SIZE,
                                                                      num_workers=NUM_WORKERS)
     criterion = nn.CrossEntropyLoss(weight=class_weight).to(DEVICE)
     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
@@ -242,10 +259,11 @@ def main():
                           start = 1,
                           test_loader = test_loader,
                           device = DEVICE,
-                          regularize = None)
+                          regularize = REGULARIZE)
     cmtx,cls = evaluation(model,test_loader,label_encoder=lb)
-    record_log(MAIN_NAME,NUM_EPOCHS,record,cmtx=cmtx,cls=cls)
-    save(MAIN_NAME,model,optimizer,NUM_EPOCHS)
+    if output:
+        record_log(MAIN_NAME,NUM_EPOCHS,record,cmtx=cmtx,cls=cls)
+        save(MAIN_NAME,model,optimizer,NUM_EPOCHS)
     return
 
 

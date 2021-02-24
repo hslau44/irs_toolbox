@@ -58,3 +58,20 @@ class SimCLR(nn.Module):
         t = self.decoder(t)
         t = torch.split(t,batch_size,dim=0)
         return t # tuple
+    
+
+
+class SimCLR_multi(nn.Module):
+    def __init__(self, enc1, enc2, dec1, dec2):
+        super(SimCLR_multi, self).__init__()
+        self.encoder = enc1
+        self.decoder = dec1
+        self.encoder2 = enc2
+        self.decoder2 = dec2
+
+    def forward(self,t): # tuple
+        o1 = self.encoder(t[0])
+        o1 = self.decoder(o1)
+        o2 = self.encoder2(t[1])
+        o2 = self.decoder2(o2)
+        return o1,o2 # tuple
