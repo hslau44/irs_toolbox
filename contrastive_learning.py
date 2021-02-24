@@ -18,13 +18,13 @@ np.random.seed(1024)
 torch.manual_seed(1024)
 
 # gpu setting
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 device = DEVICE
 torch.cuda.set_device(DEVICE)
 
 ### data setting
-DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
-# DIRC = '.'
+# DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
+DIRC = './data/CSI_data_pair'
 MODALITY='dummy'
 AXIS=1
 TRAIN_SIZE=0.8
@@ -37,10 +37,10 @@ BATCH_SIZE=64
 NUM_WORKERS = 0
 TEMPERATURE=0.1
 REGULARIZE = None
-PRETRAIN_EPOCHS = 1
+PRETRAIN_EPOCHS = 0
 FINETUNE_EPOCHS = 10
 MAIN_NAME = 'TEST'#'Trainmode_simclr_Network_shallowv2_Data_exp4nuc1'
-OUT_PATH = None #'.'
+OUT_PATH = None # '.'
 output = OUT_PATH
 
 
@@ -111,15 +111,17 @@ def main():
                                                                                                 num_workers=NUM_WORKERS)
     criterion = NT_Xent(BATCH_SIZE, temperature=TEMPERATURE, world_size=1)
     optimizer = torch.optim.SGD(list(model.parameters()), lr=0.0005)
-    model, record = pretrain(model=model,
-                             train_loader=pretrain_loader,
-                             criterion=criterion,
-                             optimizer=optimizer,
-                             end=PRETRAIN_EPOCHS,
-                             start=1,
-                             device=DEVICE)
-    if output:
-        record_log(MAIN_NAME,PRETRAIN_EPOCHS,record,filepath=OUT_PATH+'/record/')
+    pretrain_output = PRETRAIN_EPOCHS
+    if pretrain_output > 0:
+        model, record = pretrain(model=model,
+                                 train_loader=pretrain_loader,
+                                 criterion=criterion,
+                                 optimizer=optimizer,
+                                 end=PRETRAIN_EPOCHS,
+                                 start=1,
+                                 device=DEVICE)
+        if output:
+            record_log(MAIN_NAME,PRETRAIN_EPOCHS,record,filepath=OUT_PATH+'/record/')
     del criterion,optimizer,pretrain_loader
     # Finetuning
     model = add_classifier(model.encoder,outsize,freeze=True)
