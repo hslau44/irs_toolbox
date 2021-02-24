@@ -10,7 +10,7 @@ from logger import logging
 from torchvision.datasets.folder import ImageFolder
 
 from data.raw_csi import import_clean_data
-from data.spectrogram import import_data, import_pair_data, import_CsiPwr_data
+from data.spectrogram import import_data, import_pair_data, import_CsiPwr_data,import_dummies
 from data.transformation import *
 from data.utils import DatasetObject
 
@@ -101,8 +101,11 @@ def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,join
         X1,X2,y = import_CsiPwr_data(directory)
         if joint not in ['first','second']:
             joint = 'first'
+    elif modality == 'dummy':
+        X1,X2,y = import_dummies(size=64*4,class_num=6)
     else:
-        raise ValueError("Must be in {'single','double'}")
+        raise ValueError("Must be in {'single','double','dummy'}")
+
     ### add and transpose axis
     if axis:
         X1 = X1.reshape(*X1.shape,1)
@@ -144,6 +147,22 @@ def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,join
     elif sampling == 'weight':
         class_weight = torch.FloatTensor([1-w for w in pd.Series(y_train).value_counts(normalize=True).sort_index().tolist()])
     ### dataloader
+    pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
+    finetune_loader = create_dataloader(X_train,label=y_train,batch_size=batch_size,num_workers=num_workers)
+    validatn_loader  = create_dataloader(X_test,label=y_test,batch_size=y_test.shape[0],num_workers=num_workers)
+    ### Report
+    print('X1_train: ',X1_train.shape,'\tX2_train: ',X2_train.shape)
+    print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
+    print("class: ",lb.classes_)
+    if sampling == 'weight':
+        print("class_size: ",1-class_weight)
+        return pretrain_loader, finetune_loader, validatn_loader, lb, class_weight
+    else:
+        return pretrain_loader, finetune_loader, validatn_loader, lb
+
+
+def prepare_dummy():
+
     pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
     finetune_loader = create_dataloader(X_train,label=y_train,batch_size=batch_size,num_workers=num_workers)
     validatn_loader  = create_dataloader(X_test,label=y_test,batch_size=y_test.shape[0],num_workers=num_workers)

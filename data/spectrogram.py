@@ -103,3 +103,9 @@ def import_CsiPwr_data(directory):
         data['y'].append(y)
     print(" Complete")
     return np.concatenate(data['X1']), np.concatenate(data['X2']), np.concatenate(data['y'])
+
+def import_dummies(size=64,class_num=6):
+    X1 = np.random.rand(size,65,501)
+    X2 = np.random.rand(size,65,501)
+    y  = np.random.randint(0,6,size=(size,))
+    return X1,X2,y

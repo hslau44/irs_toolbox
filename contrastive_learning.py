@@ -10,7 +10,7 @@ from models import add_SimCLR,add_classifier
 from models.baseline import Encoder as Baseline_Encoder
 from models.cnn import create_vgg16
 from losses import NT_Xent
-from train import train
+from train import train,record_log,evaluation,save
 
 
 # random seed
@@ -23,12 +23,12 @@ device = DEVICE
 torch.cuda.set_device(DEVICE)
 
 ### data setting
-DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data'
+DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
 # DIRC = '.'
-MODALITY='single'
+MODALITY='dummy'
 AXIS=1
 TRAIN_SIZE=0.8
-JOINT='first'
+JOINT='joint'
 PER=None
 SAMPLING='weight'
 
@@ -38,9 +38,10 @@ NUM_WORKERS = 0
 TEMPERATURE=0.1
 REGULARIZE = None
 PRETRAIN_EPOCHS = 1
-FINETUNE_EPOCHS = 1
-MAIN_NAME = 'Trainmode_normal_Network_shallowv2_Data_exp4nuc1'
-OUT_PATH = '.'
+FINETUNE_EPOCHS = 10
+MAIN_NAME = 'TEST'#'Trainmode_simclr_Network_shallowv2_Data_exp4nuc1'
+OUT_PATH = None #'.'
+output = OUT_PATH
 
 
 
@@ -65,7 +66,7 @@ def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device =
 
             optimizer.zero_grad()
 
-            items = model(*items)
+            items = model(items)
 
             loss = criterion(*items)
 
@@ -98,12 +99,12 @@ def create_encoder():
 
 def main():
     encoder, outsize = create_encoder()
-    model = add_SimCLR(enc,outsize)
+    model = add_SimCLR(encoder,outsize)
     pretrain_loader, finetune_loader, validatn_loader, lb, class_weight = prepare_double_source(directory=DIRC,
                                                                                                 modality=MODALITY,
                                                                                                 axis=AXIS,
                                                                                                 train_size=TRAIN_SIZE,
-                                                                                                joint='first',
+                                                                                                joint=JOINT,
                                                                                                 p=PER,
                                                                                                 sampling=SAMPLING,
                                                                                                 batch_size=BATCH_SIZE,
@@ -117,10 +118,11 @@ def main():
                              end=PRETRAIN_EPOCHS,
                              start=1,
                              device=DEVICE)
-    record_log(MAIN_NAME,PRETRAIN_EPOCHS,record,filepath=OUT_PATH+'/record/')
+    if output:
+        record_log(MAIN_NAME,PRETRAIN_EPOCHS,record,filepath=OUT_PATH+'/record/')
     del criterion,optimizer,pretrain_loader
     # Finetuning
-    model = add_classifier(enc,outsize,freeze=True)
+    model = add_classifier(model.encoder,outsize,freeze=True)
     criterion = nn.CrossEntropyLoss(weight=class_weight).to(DEVICE)
     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
     model, record = train(model=model,
@@ -133,8 +135,9 @@ def main():
                           device = DEVICE,
                           regularize = REGULARIZE)
     cmtx,cls = evaluation(model,validatn_loader,label_encoder=lb)
-    record_log(MAIN_NAME,FINETUNE_EPOCHS,record,cmtx=cmtx,cls=cls)
-    save(MAIN_NAME,model,optimizer,FINETUNE_EPOCHS)
+    if output:
+        record_log(MAIN_NAME,FINETUNE_EPOCHS,record,cmtx=cmtx,cls=cls)
+        save(MAIN_NAME,model,optimizer,FINETUNE_EPOCHS)
     return
 
 if __name__ == '__main__':

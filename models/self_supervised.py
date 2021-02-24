@@ -51,10 +51,10 @@ class SimCLR(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self,t):
+    def forward(self,t): # tuple
         batch_size = t[0].shape[0]
-        t = torch.cat(t,dim=0)
+        t = torch.cat(t,dim=0) # tensor
         t = self.encoder(t)
         t = self.decoder(t)
         t = torch.split(t,batch_size,dim=0)
-        return t
+        return t # tuple

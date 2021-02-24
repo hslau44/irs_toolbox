@@ -135,7 +135,7 @@ def cmtx_table(cmtx,label_encoder=None):
 
 
 
-def make_directory(name, epoch=None, filepath='./models/saved_models/'):
+def make_directory(name, epoch=None, filepath='./'):
     time = strftime("%Y_%m_%d_%H_%M", gmtime())
     directory = filepath + name + '_checkpoint_' + str(epoch) + '__' + time
     return directory
@@ -161,8 +161,8 @@ def load_checkpoint(model,optimizer,filepath):
 
 # -----------------------------------------helper---------------------------------------
 
-def record_log(main_name,epochs,record,cmtx='None',cls='None'):
-    path = make_directory(main_name,epoch=epochs,filepath=PATH+'/record/')
+def record_log(main_name,epochs,record,cmtx='None',cls='None',filepath='./record/'):
+    path = make_directory(main_name,epoch=epochs,filepath=filepath)
     pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
     if type(cmtx) != str:
         pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
@@ -171,8 +171,8 @@ def record_log(main_name,epochs,record,cmtx='None',cls='None'):
         cls.to_csv(path+'_report.csv')
     return
 
-def save(main_name,model,optimizer,epochs):
-    path = make_directory(main_name,epoch=epochs,filepath=PATH+'/models/saved_models/')
+def save(main_name,model,optimizer,epochs,filepath='./models/saved_models/'):
+    path = make_directory(main_name,epoch=epochs,filepath=filepath)
     save_checkpoint(model, optimizer, epochs, path)
     return
 
