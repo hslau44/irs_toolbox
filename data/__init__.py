@@ -117,7 +117,7 @@ def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,join
     y,lb = label_encode(y)
     ### select training data
     X1,X2,y = shuffle(X1,X2,y)
-    X1_train, X1_test, X2_train, X2_test, y_train, y_test = train_test_split(X1,X2,y,train_size=train_size)
+    X1_train, X1_test, X2_train, X2_test, y_train, y_test = train_test_split(X1,X2,y,train_size=train_size,stratify=y)
     if joint == 'joint':
         X_train = np.concatenate((X1_train,X2_train))
         y_train = np.concatenate((y_train,y_train))
