@@ -24,23 +24,23 @@ torch.cuda.set_device(DEVICE)
 
 ### data setting
 # DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
-DIRC = './data/CSI_PWR'
-MODALITY='double'
+DIRC = './data/CSI_CSI'
+MODALITY='single'
 AXIS=1
 TRAIN_SIZE=0.8
-JOINT='second'
+JOINT='first'
 PER=None
 SAMPLING='weight'
 
 ### train setting
-BATCH_SIZE=64
+BATCH_SIZE= 64
 NUM_WORKERS = 4
 TEMPERATURE= 0.1
-REGULARIZE = False
+REGULARIZE = True
 PRETRAIN_EPOCHS = 0
 FREEZE=False
 FINETUNE_EPOCHS = 300
-MAIN_NAME = 'Trainmode-normal_Network-vgg16_Data-exp4csipwr-2' #'TEST'
+MAIN_NAME = 'Trainmode-normal_Network-vgg16_Data-exp4csicsi-1_s-l2reg' #'TEST'
 OUT_PATH = '.' # None #    
 
 
@@ -52,7 +52,7 @@ if PRETRAIN_EPOCHS > 0:
     
     
     
-print('----------------------EXP ',16,'----------------------')
+print('----------------------EXP ',19,'----------------------')
 
 
 def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device = None):
@@ -108,10 +108,10 @@ def create_encoder():
     return encoder, outsize
 
 def create_encoders():
-    outsize = 512*3*1
-    encoder = create_vgg16((3,1))
-    outsize2 = 512*2*2
-    encoder2 = create_vgg16((2,2))
+    outsize = 512*2*2 
+    encoder = create_vgg16((2,2))  
+    outsize2 = 512*3*1 
+    encoder2 = create_vgg16((3,1))
     return encoder,encoder2,outsize,outsize2
 
 
