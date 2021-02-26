@@ -11,6 +11,17 @@ from sklearn.preprocessing import LabelEncoder
 # ---------------------------------sub------------------------------------------
 
 def major_vote_(arr, impurity_threshold=0.01):
+    """
+    Returns the elment of an array which has the majority
+
+    Parameters:
+    arr (numpy.ndarray<obj>): input array,  elements type must be consistent and with type {int,str}. Array undergoes flatten.
+    impurity_threshold (float): if the frequency of the least common element is bigger than impurity_threshold, return to the least common element
+
+    Returns:
+    result (obj): the elment of an array which has the majority
+
+    """
     counter = Counter(list(arr.reshape(-1)))
     lowest_impurity = float(counter.most_common()[-1][-1]/arr.shape[0])
     if lowest_impurity > impurity_threshold:
@@ -21,6 +32,17 @@ def major_vote_(arr, impurity_threshold=0.01):
 
 def resampling_(arr,oversampling=True):
     """Return a list of index after resampling from array"""
+    """
+    Stratified Sampling of array, return the index for indexing array
+
+    Parameters:
+    arr (numpy.ndarray<obj>): input array, array should be 1 dimension to work properly. Elements type must be consistent and with type {int,str}. Array undergoes flatten.
+    oversampling (bool): {True,False}, oversampling if True, else undersampling
+
+    Returns:
+    idx_ls (numpy.ndarray<obj>): index of the array that undergoes Stratified Sampling
+
+    """
     series = pd.Series(arr.reshape(-1))
     value_counts = series.value_counts()
     if oversampling == True:
@@ -39,12 +61,21 @@ def resampling_(arr,oversampling=True):
 # ---------------------------------main------------------------------------------
 
 def where(*arrays,condition):
-    """select item in multi arrays based on condition"""
+    """select item in multi arguments of numpy.ndarrays based on condition, return arguments of numpy.ndarrays"""
     return [arr[np.where(condition)] for arr in arrays]
 
 def slide(*arrays, window_size, slide_size):
     """
     slide the 0 axis of the arrays to create new data with window_size
+
+    Parameters:
+    arrays (numpy.ndarray<obj>): input array
+    window_size (int): window_size
+    slide_size (int): skipping factor
+
+    Returns:
+    arrays: with size (number of augmented sample,window_size,...)
+
     """
     length = arrays[0].shape[0]
 
@@ -97,6 +128,7 @@ def resampling(*arrays,labels,oversampling=True):
 # ---------------------------------helper------------------------------------------
 
 def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
+    """helper function of slide for DatasetObj"""
     X, y, z = slide(X, y, z, window_size=window_size, slide_size=slide_size)
     y = major_vote(y,impurity=0.01)
     if skip_labels != None:
@@ -106,18 +138,11 @@ def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
 
 def stacking(x):
     """Increase channel dimension from 1 to 3"""
-
-#     if scale != False:
-#         scaler = MinMaxScaler()
-#         data_s = scale*scaler.fit_transform(data.reshape(len(data),-1))
-#     else:
-#         data_s = data
-#     data_s = data_s.reshape(data_s.shape[0],-1,90,1) # change axis 1
-#     return np.concatenate((data_s,data_s,data_s),axis=3)
     x = x.reshape(*x.shape,1)
     return np.concatenate((x,x,x),axis=3)
 
 def breakpoints(ls):
+    """find the index where element in ls(list) changes"""
     points = []
     for i in range(len(ls)-1):
         if ls[i+1] != ls[i]:
@@ -125,6 +150,7 @@ def breakpoints(ls):
     return points
 
 def selections(*arg,**kwarg):
+    """self implementation of train test split from sklearn, kwarg "p" for train size"""
     size = int(arg[0].shape[0]*kwarg['p'])
     index = np.arange(0,arg[0].shape[0])
     test_selection = np.random.choice(index,size,replace=False)
@@ -133,6 +159,7 @@ def selections(*arg,**kwarg):
 
 
 def label_encode(label):
+    """return label-encoded array and its LabelEncoder"""
     enc = LabelEncoder()
     label = enc.fit_transform(label)
     return label, enc
