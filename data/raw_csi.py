@@ -19,7 +19,7 @@ def list_to_string(ls):
     return string
 
 def col_generate(exp_no):
-    if exp_no == 'exp_1':
+    if exp_no == 'exp_3':
         col = []
         for i in range(1,91):
             col.append(str(f'amp_{i}'))
@@ -29,7 +29,7 @@ def col_generate(exp_no):
         col = ['time','unknown_1']
         for i in range(1,91):
             col.append(str(f'amp_{i}'))
-    elif exp_no == 'exp_3':
+    elif exp_no == 'exp_1':
         col = ['time','unknown_1']
         for i in range(1,91):
             col.append(str(f'amp_{i}'))
@@ -51,9 +51,9 @@ def import_experimental_data(exp_no,fp):
     assert len(filepaths_x) == len(filepaths_y)
     print(f"Found {len(filepaths_x)} files.")
     for filepath_x,filepath_y in zip(filepaths_x,filepaths_y):
-        if exp_no in ['exp_1','exp_2']:
+        if exp_no in ['exp_3','exp_2']:
             user = filepath_x.split('\\')[-1].split("_")[1]
-        elif exp_no == 'exp_3':
+        elif exp_no == 'exp_1':
             user = filepath_x.split('.')[0].split("_")[7:]
             user = list_to_string(user)
         else:
@@ -69,7 +69,7 @@ def clean_data(name,df):
     Clean specific dataset based on the name. Available dataset are {"exp1",
     "exp2"}
     """
-    if name == 'exp_1':
+    if name == 'exp_3':
         pass
         # df = df.reset_index(drop=True)
         # df.user = df.user.apply(lambda x: x.split("\\")[0])
@@ -77,7 +77,7 @@ def clean_data(name,df):
         #  df = df.reset_index(drop=True)
         df.user = df.user.apply(lambda x: x.split('.')[0])
         df = df.iloc[:,2:]
-    elif name == 'exp_3':
+    elif name == 'exp_1':
         #  df = df.reset_index(drop=True)
         df = df.iloc[:,2:]
         df['label'] = df['label'].fillna('noactivity')
