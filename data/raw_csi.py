@@ -85,8 +85,11 @@ def clean_data(name,df):
 
 def import_clean_data(name,fp):
     """
-    import clean dataset based on the name. Available dataset are {"exp1",
-    "exp2"}
+    import clean dataset based on the name.
+
+    Arguments:
+    name (str): Available dataset are {"exp1","exp2"}
+    fp (str): filepath, C:/directory/folder
     """
     if name in ['exp_1','exp_2','exp_3']:
         df = import_experimental_data(name,fp)
@@ -98,6 +101,7 @@ def import_clean_data(name,fp):
 # ------------------------------------helper------------------------------------
 
 def seperate_dataframes(df):
+    """To be depreciated """
     features_ls,labels_ls = [],[]
     for user in df['user'].unique():
         dataframe = df[df['user']==user]
@@ -110,12 +114,14 @@ def seperate_dataframes(df):
 
 
 def create_datasetobj(X,y):
+    """To be depreciated """
     datasetobj = DatasetObject()
     datasetobj.import_data(X, y)
     return datasetobj
 
 
 def transform_datasetobj(datasetobj, window_size=1000, slide_size=200, txr=1, oversampling=True):
+    """To be depreciated """
     # augmentation
     datasetobj.data_transform(lambda x,y,z : process_data.slide_augmentation(x, y, z,window_size=window_size,slide_size=slide_size,skip_labels=['noactivity']),axis=0)
     # txr and channels
@@ -131,6 +137,7 @@ def transform_datasetobj(datasetobj, window_size=1000, slide_size=200, txr=1, ov
     return datasetobj, label_encoder
 
 def prepare_exp_1(nums=[9], window_size=900,slide_size=200,txr=1,oversampling=True,train_batch_sizes=128):
+    """To be depreciated """
     fp = "E:/external_data/Experiment3/csv_files/exp_1"
     df = import_clean_data('exp_1',fp)
     X_ls, y_ls = seperate_dataframes(df)
