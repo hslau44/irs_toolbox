@@ -56,7 +56,6 @@ def import_pair_data(directory):
     """
     import all spectrogram (in pair) in the directory
     """
-
     print("Importing Data ",end='')
     data = {'X1':[],'X2':[],'y':[]}
     for label in os.listdir(directory):
@@ -109,3 +108,75 @@ def import_dummies(size=64,class_num=6):
     X2 = np.random.rand(size,65,501)
     y  = np.random.randint(0,6,size=(size,))
     return X1,X2,y
+
+
+def intersect(d):
+    """return array with intersected item in array in d"""
+    d = np.array(d)
+    ls = d[0]
+    for new in d[1:]:
+        ls = np.intersect1d(ls,new).tolist()
+    return ls
+
+
+def import_modal_data(directory,return_dict=False):
+    """
+    import all spectrogram (group by same modality) in the directory
+
+    Arguments:
+    directory: file in dictionary must have path: directory/label/modality/files.csv
+    return_dict (bool): if True, return dictionary
+
+    Reuturn:
+    *arr (np.ndarray): return based on number of modality
+
+    """
+    print("Importing Data ")
+
+    data = {}
+    first = 0
+
+    for label in os.listdir(directory):
+
+        pfiles = []
+
+        if first == 0:
+            for modality in os.listdir(directory+'/'+label):
+                data[modality] = []
+                first += 1
+
+        for modality in os.listdir(directory+'/'+label):
+
+            pfiles.append([f.split('.')[0] for f in os.listdir(directory+'/'+label+'/'+modality)])
+
+        common_files = intersect(pfiles)
+
+        data['label'] = []
+
+        print('label: ',label,'   common file: ',len(common_files))
+
+        for modality in os.listdir(directory+'/'+label):
+
+            files = [directory+'/'+label+'/'+modality+'/'+pfilename+'.csv' for pfilename in common_files]
+
+            X = import_spectrograms(files)
+
+            data[modality].append(X)
+
+            # print(len(data[modality]))
+
+        y = np.full(X.shape[0], label)
+
+        data['label'].append(y)
+
+    print("Complete")
+
+    for key in data.keys():
+
+        data[key] = np.concatenate(data[key])
+
+    if return_dict:
+        return data
+
+    else:
+        return (data[key] for key in data.keys())
