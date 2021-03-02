@@ -144,14 +144,14 @@ def import_modal_data(directory,return_dict=False):
             for modality in os.listdir(directory+'/'+label):
                 data[modality] = []
                 first += 1
+                
+            data['label'] = []
 
         for modality in os.listdir(directory+'/'+label):
 
             pfiles.append([f.split('.')[0] for f in os.listdir(directory+'/'+label+'/'+modality)])
 
         common_files = intersect(pfiles)
-
-        data['label'] = []
 
         print('label: ',label,'   common file: ',len(common_files))
 

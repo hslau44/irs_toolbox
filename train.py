@@ -29,7 +29,7 @@ torch.cuda.set_device(DEVICE)
 
 ### data setting
 # DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
-DIRC = './data/CSI_data'
+DIRC = './data/experiment_data/exp_2/spectrogram'
 AXIS=1
 TRAIN_SIZE=0.8
 SAMPLING='weight'
@@ -38,8 +38,8 @@ SAMPLING='weight'
 BATCH_SIZE=64
 NUM_WORKERS = 0
 REGULARIZE = None
-NUM_EPOCHS = 100
-MAIN_NAME = 'TEST'#'Trainmode_simclr_Network_shallowv2_Data_exp4nuc1'
+NUM_EPOCHS = 200
+MAIN_NAME = 'Trainmode-normal_Network-shallowv2_Data-exp4csi' #'Trainmode_simclr_Network_shallowv2_Data_exp4nuc1'
 OUT_PATH = None # '.'
 output = OUT_PATH
 
@@ -230,11 +230,12 @@ from models import add_classifier
 #         # print(X.shape)
 #         return X
 
-# def create_baseline():
-#     out = 96
-#     enc = Encoder([32,64,out])
-#     model = add_classifier(enc,out_size=10*out,freeze=False)
-#     return model
+def create_baseline():
+    size = 96
+    enc = Encoder([32,64,size])
+    clf = Classifier(size*10,128,5)
+    model = ED_module(enc,clf)
+    return model
 
 
 # -----------------------------------Main-------------------------------------------

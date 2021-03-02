@@ -55,13 +55,13 @@ def prepare_single_source(directory,axis=3,train_size=0.8,sampling='weight',batc
     ### add and transpose axis
     if axis:
         X = X.reshape(*X.shape,1)
-    if axis == 3:
+    if axis == 1:
         X = X.transpose(0,3,1,2)
     ### label encode
     y,lb = label_encode(y)
     ### select training data
     X,y = shuffle(X,y)
-    X_train, X_test, y_train, y_test = train_test_split(X,y,train_size=train_size)
+    X_train, X_test, y_train, y_test = train_test_split(X,y,train_size=train_size,stratify=y)
     ### resample
     if sampling == 'resampling':
         X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=True)
