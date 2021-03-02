@@ -177,11 +177,13 @@ def load_checkpoint(model,optimizer,filepath):
 
 # -----------------------------------------helper---------------------------------------
 
-def record_log(main_name,epochs,record,cmtx='None',cls='None',filepath='./record/'):
+def record_log(main_name,epochs,record='None',cmtx='None',cls='None',filepath='./record/'):
     path = make_directory(main_name,epoch=epochs,filepath=filepath)
-    pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
+    if type(record) != str:
+        pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
     if type(cmtx) != str:
-        pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
+        if  type(record) != str:
+            pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
         cmtx.to_csv(path+'_cmtx.csv')
     if type(cls) != str:
         cls.to_csv(path+'_report.csv')

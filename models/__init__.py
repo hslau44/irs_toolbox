@@ -29,7 +29,7 @@ def add_SimCLR(enc,out_size):
 def add_classifier(enc,out_size,freeze):
     if freeze == True:
         enc = freeze_network(enc)
-    clf = Classifier(out_size,128,7)
+    clf = Classifier(out_size,128,5)
     model = ED_module(encoder=enc,decoder=clf)
     return model
 

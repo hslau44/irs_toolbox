@@ -52,7 +52,33 @@ def import_data(directory):
     return np.concatenate(data['X']), np.concatenate(data['y'])
 
 
-def import_pair_data(directory):
+# def import_pair_data(directory):
+#     """
+#     import all spectrogram (in pair) in the directory
+#     """
+#     print("Importing Data ",end='')
+#     data = {'X1':[],'X2':[],'y':[]}
+#     for label in os.listdir(directory):
+#         print('>',end='')
+#         # selcting available pairs
+#         pfiles_nuc1 = [f.split('.')[0][5:] for f in os.listdir(directory+'/'+label+'/'+'nuc1')]
+#         pfiles_nuc2 = [f.split('.')[0][5:] for f in os.listdir(directory+'/'+label+'/'+'nuc2')]
+#         available_pairs = np.intersect1d(pfiles_nuc1,pfiles_nuc2).tolist()
+#         files_nuc1 = [directory+'/'+label+'/'+'nuc1'+'/'+'nuc1_'+pfilename+'.csv' for pfilename in available_pairs]
+#         files_nuc2 = [directory+'/'+label+'/'+'nuc2'+'/'+'nuc2_'+pfilename+'.csv' for pfilename in available_pairs]
+#         # importing
+#         X1 = import_spectrograms(files_nuc1)
+#         X2 = import_spectrograms(files_nuc2)
+#         y = np.full(X1.shape[0], label)
+#         assert X1.shape[0] == X2.shape[0]
+#         data['X1'].append(X1)
+#         data['X2'].append(X2)
+#         data['y'].append(y)
+#     print(" Complete")
+#     return np.concatenate(data['X1']), np.concatenate(data['X2']), np.concatenate(data['y'])
+
+
+def import_pair_data(directory,modal=['csi','nuc2']):
     """
     import all spectrogram (in pair) in the directory
     """
@@ -61,37 +87,11 @@ def import_pair_data(directory):
     for label in os.listdir(directory):
         print('>',end='')
         # selcting available pairs
-        pfiles_nuc1 = [f.split('.')[0][5:] for f in os.listdir(directory+'/'+label+'/'+'nuc1')]
-        pfiles_nuc2 = [f.split('.')[0][5:] for f in os.listdir(directory+'/'+label+'/'+'nuc2')]
+        pfiles_nuc1 = [f.split('.')[0] for f in os.listdir(directory+'/'+label+'/'+modal[0])]
+        pfiles_nuc2 = [f.split('.')[0] for f in os.listdir(directory+'/'+label+'/'+modal[1])]
         available_pairs = np.intersect1d(pfiles_nuc1,pfiles_nuc2).tolist()
-        files_nuc1 = [directory+'/'+label+'/'+'nuc1'+'/'+'nuc1_'+pfilename+'.csv' for pfilename in available_pairs]
-        files_nuc2 = [directory+'/'+label+'/'+'nuc2'+'/'+'nuc2_'+pfilename+'.csv' for pfilename in available_pairs]
-        # importing
-        X1 = import_spectrograms(files_nuc1)
-        X2 = import_spectrograms(files_nuc2)
-        y = np.full(X1.shape[0], label)
-        assert X1.shape[0] == X2.shape[0]
-        data['X1'].append(X1)
-        data['X2'].append(X2)
-        data['y'].append(y)
-    print(" Complete")
-    return np.concatenate(data['X1']), np.concatenate(data['X2']), np.concatenate(data['y'])
-
-
-def import_CsiPwr_data(directory):
-    """
-    import all spectrogram (in pair) in the directory
-    """
-    print("Importing Data ",end='')
-    data = {'X1':[],'X2':[],'y':[]}
-    for label in os.listdir(directory):
-        print('>',end='')
-        # selcting available pairs
-        pfiles_nuc1 = [f.split('.')[0] for f in os.listdir(directory+'/'+label+'/'+'csi')]
-        pfiles_nuc2 = [f.split('.')[0] for f in os.listdir(directory+'/'+label+'/'+'pwr')]
-        available_pairs = np.intersect1d(pfiles_nuc1,pfiles_nuc2).tolist()
-        files_nuc1 = [directory+'/'+label+'/'+'csi'+'/'+pfilename+'.csv' for pfilename in available_pairs]
-        files_nuc2 = [directory+'/'+label+'/'+'pwr'+'/'+pfilename+'.csv' for pfilename in available_pairs]
+        files_nuc1 = [directory+'/'+label+'/'+modal[0]+'/'+pfilename+'.csv' for pfilename in available_pairs]
+        files_nuc2 = [directory+'/'+label+'/'+modal[1]+'/'+pfilename+'.csv' for pfilename in available_pairs]
         # importing
         X1 = import_spectrograms(files_nuc1)
         X2 = import_spectrograms(files_nuc2)

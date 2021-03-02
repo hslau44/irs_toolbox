@@ -10,7 +10,7 @@ from logger import logging
 from torchvision.datasets.folder import ImageFolder
 
 from data.raw_csi import import_clean_data
-from data.spectrogram import import_data, import_pair_data, import_CsiPwr_data,import_dummies
+from data.spectrogram import import_data, import_pair_data, import_dummies
 from data.transformation import *
 from data.utils import DatasetObject
 
@@ -47,6 +47,67 @@ def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
     tensordataset = torch.utils.data.TensorDataset(*tensors)
     dataloader = torch.utils.data.DataLoader(tensordataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, drop_last=True)
     return dataloader
+
+
+def prepare_lab_dataloaders(X1,X2,y,joint='first',sampling='weight',batch_size=64,num_workers=0,lb=None):
+    X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
+    X2 = X1.reshape(*X2.shape,1).transpose(0,3,1,2)
+    X1_train, X1_test, X2_train, X2_test, y_train, y_test = train_test_split(X1,X2,y,train_size=0.8,stratify=y)
+    ### pretrain_loader
+    pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
+    ### lab_finetune
+    ### joining
+    if joint == 'joint':
+        X_train = np.concatenate((X1_train,X2_train))
+        y_train = np.concatenate((y_train,y_train))
+        X_test = np.concatenate((X1_test,X2_test))
+        y_test = np.concatenate((y_test,y_test))
+    elif joint == 'first':
+        X_train = X1_train
+        y_train = y_train
+        X_test = X1_test
+        y_test = y_test
+    ### filterning
+    X_train,y_train = where(X_train,y_train,condition=(y_train != 'waving'))
+    X_train,y_train = where(X_train,y_train,condition=(y_train != 'standff'))
+    X_test,y_test = where(X_test,y_test,condition=(y_test != 'waving'))
+    X_test,y_test = where(X_test,y_test,condition=(y_test != 'standff'))
+    y_train,lb = label_encode(y_train)
+    y_test,lb = label_encode(y_test,enc=lb)
+    
+    ### sampling
+    class_weight = None
+    if isinstance(sampling,int):
+        idx = resampling_(y_train,oversampling=False)
+        X_train,_,y_train,_ = train_test_split(X_train[idx],y_train[idx],train_size=len(lb.classes_)*sampling,stratify=y_train[idx])
+        finetune_loader = create_dataloader(X_train,label=y_train,batch_size=y_train.shape[0],num_workers=num_workers)
+        validatn_loader  = create_dataloader(X_test,label=y_test, batch_size=y_test.shape[0],num_workers=num_workers)
+    else:
+        if sampling == 'resampling':
+            X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=True)
+            X_test, y_test = resampling(X_test, y_test, labels=y_test,oversampling=False)
+        finetune_loader = create_dataloader(X_train,label=y_train,batch_size=batch_size,num_workers=num_workers)
+        validatn_loader  = create_dataloader(X_test,label=y_test,batch_size=y_test.shape[0],num_workers=num_workers)
+    class_weight = torch.FloatTensor([1-w for w in pd.Series(y_train).value_counts(normalize=True).sort_index().tolist()])
+    print('X1_train: ',X1_train.shape,'\tX2_train: ',X2_train.shape)
+    print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
+    print("class: ",lb.classes_)
+    print("class_size: ",1-class_weight)
+    return pretrain_loader, finetune_loader, validatn_loader, lb, class_weight
+
+
+def prepare_field_dataloaders(X,y,num=1,lb=None):
+    """num: number of sample per class in finetuning dataloader"""
+    X = X.reshape(*X.shape,1).transpose(0,3,1,2)
+    y,lb = label_encode(y_exp3)
+    idx = resampling_(y,oversampling=False)
+    X_finetune, X_validatn, y_finetune, y_validatn = train_test_split(X[idx],y[idx],train_size=len(lb.classes_)*num,stratify=y[idx])
+    finetune_loader = create_dataloader(X_finetune, label=y_finetune,batch_size=y_finetune.shape[0],num_workers=0)
+    validatn_loader = create_dataloader(X_validatn, label=y_validatn,batch_size=y_validatn.shape[0],num_workers=0)
+    print('X_finetune: ', X_finetune.shape, 'y_finetune: ', y_finetune.shape)
+    print('X_validatn: ', X_validatn.shape, 'y_finetune: ', y_validatn.shape)
+    print('Classes: ',lb.classes_)
+    return finetune_loader,validatn_loader,lb
 
 
 def prepare_single_source(directory,axis=3,train_size=0.8,sampling='weight',batch_size=64,num_workers=0):
@@ -96,9 +157,9 @@ def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,join
     ### import data
     print('modality:',modality)
     if modality == 'single':
-        X1,X2,y = import_pair_data(directory)
+        X1,X2,y = import_pair_data(directory,modal=['csi','nuc2'])
     elif modality == 'double':
-        X1,X2,y = import_CsiPwr_data(directory)
+        X1,X2,y = import_pair_data(directory,modal=['csi','pwr'])
         if joint not in ['first','second']:
             joint = 'first'
     elif modality == 'dummy':
@@ -176,72 +237,4 @@ def prepare_dummy():
     else:
         return pretrain_loader, finetune_loader, validatn_loader, lb
 
-# def prepare_data(mode,directory):
-#     # pair data
-#     if mode == 1 or mode == 2:
-#         if mode == 1:
-#             X1,X2,y = import_pair_data(directory)
-#         elif mode == 2:
-#             X1,X2,y = import_CsiPwr_data(directory)
-#         # processing
-#         y,lb = label_encode(y)
-#         X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
-#         X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)
-#         return X1,X2,y,lb
-#     # single data
-#     elif mode == 0:
-#         X,y = import_data(directory)
-#         X = X.reshape(*X.shape,1).transpose(0,3,1,2)
-#         y,lb = label_encode(y)
-#         return X,y,lb
-#     else:
-#         raise ValueError('Must be 1 or 2 for pair, 0 elsewise')
-#     return
-#
-#
-# def prepare_dataloader_pairdata(mode,directory=DIRC,batch_size=bsz,joint=None,p=None,resample=None):
-#
-#     if mode == 2:
-#         joint = None
-#
-#     if mode == 0:
-#         X,y,lb = prepare_data(mode,directory)
-#         X_train, X_test, y_train, y_test = train_test_split(X,y,train_size=0.8)
-#         if resample:
-#             X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=True)
-#             X_test, y_test = resampling(X_test, y_test, labels=y_test,oversampling=False)
-#         train_loader, test_loader = create_dataloaders(X_train, y_train, X_test, y_test, train_batch_sizes=64, test_batch_sizes=200)
-#         return train_loader, test_loader,lb
-#
-#     elif mode == 1 or mode == 2:
-#         X1,X2,y,lb = prepare_data(mode,directory)
-#         X1_train, X1_test, X2_train, X2_test, y_train, y_test = train_test_split(X1,X2,y,train_size=0.8)
-#
-#         if joint == True:
-#             X_test = np.concatenate(X1_test,X2_test)
-#             y_test = np.concatenate(y_test,y_test)
-#             X_train = np.concatenate(X1_train,X2_train)
-#             y_train = np.concatenate(y_train,y_train)
-#         else:
-#             X_test = X1_test
-#             y_test = y_test
-#             X_train = X1_train
-#             y_train = y_train
-#
-#         if p:
-#             X_train, _ , y_train, _ = train_test_split(X_train,y_train,train_size=p)
-#
-#         if resample:
-#             X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=True)
-#             X_test, y_test = resampling(X_test, y_test, labels=y_test,oversampling=False)
-#
-#         pretraindataset = TensorDataset(Tensor(X1_train),Tensor(X2_train))
-#         finetunedataset = TensorDataset(Tensor(X_train),Tensor(y_train).long())
-#         validatndataset = TensorDataset(Tensor(X_test), Tensor(y_test).long())
-#         pretrain_loader = DataLoader(pretraindataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, drop_last=True)
-#         finetune_loader = DataLoader(finetunedataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, drop_last=True)
-#         validatn_loader = DataLoader(validatndataset, batch_size=2000, shuffle=True, num_workers=num_workers)
-#         print('mode: ',mode,"\tclass: ",lb.classes_)
-#         print('X1_train: ',X1_train.shape,'\tX2_train: ',X2_train.shape)
-#         print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
-#         return pretrain_loader, finetune_loader, validatn_loader, lb
+

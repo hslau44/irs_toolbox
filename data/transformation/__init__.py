@@ -158,8 +158,10 @@ def selections(*arg,**kwarg):
     return [i[train_selection] for i in arg],[i[test_selection] for i in arg]
 
 
-def label_encode(label):
+def label_encode(label,enc=None):
     """return label-encoded array and its LabelEncoder"""
-    enc = LabelEncoder()
-    label = enc.fit_transform(label)
+    if enc == None:
+        enc = LabelEncoder()
+        enc.fit(label)
+    label = enc.transform(label)
     return label, enc
