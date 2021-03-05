@@ -26,15 +26,16 @@ def add_SimCLR(enc,out_size):
     return model
 
 
-def add_classifier(enc,out_size,freeze):
+def add_classifier(enc,in_size,out_size,freeze):
     if freeze == True:
         enc = freeze_network(enc)
-    clf = Classifier(out_size,128,5)
+    clf = Classifier(in_size,128,out_size)
     model = ED_module(encoder=enc,decoder=clf)
     return model
 
 
-def create_baseline():
+
+def create_baseline_model():
     out = 96
     enc = Encoder([32,64,out])
     model = add_classifier(enc,out_size=10*out,freeze=False)

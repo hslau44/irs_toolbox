@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from torchvision.models import resnet18, vgg16
 from functools import partial
 from models.utils import *
+from models.baseline import Encoder
 
 def resnet_finetune(model, n_classes):
     """
@@ -28,17 +29,48 @@ class Attention(nn.Module):
         a = torch.relu(a)
         a = F.softmax(a,dim=1)
         return a*X
+    
+def create_baseline_encoder(num_filters=[32,64,96],scale_factor=1):
+    """
+    VGG 16 for 1 channel image, output: 512*output_size
+    """
+    model = Encoder(num_filters=num_filters)
+    model = torch.nn.Sequential(nn.UpsamplingNearest2d(scale_factor=scale_factor),
+                                model,Flatten())
+    return model
+
+def create_alexnet(output_size=(2,2),scale_factor=1):
+    """Return net and out_size(512*w*l)"""
+    net = alexnet()
+    net = torch.nn.Sequential(Stack(),
+                              nn.UpsamplingNearest2d(scale_factor=scale_factor),
+                              *(list(net.children())[0:-2]),
+                              nn.AdaptiveAvgPool2d(output_size),
+                              Flatten())
+    out_size = 256*output_size[0]*output_size[1]
+    return net, out_size
+
+def create_resnet18(output_size=(2,2)):
+    """Return net and out_size(512*w*l)"""
+    net = resnet18()
+    net = torch.nn.Sequential(Stack(),
+                              *(list(net.children())[:-2]),
+                              nn.AdaptiveAvgPool2d(output_size),
+                              Flatten())
+    out_size = 512*output_size[0]*output_size[1]
+    return net, out_size
 
 def create_vgg16(output_size=(2,2)):
     """
     VGG 16 for 1 channel image, output: 512*output_size
     """
-    mdl = vgg16()
-    model = torch.nn.Sequential(Stack(),
+    net = vgg16()
+    net = torch.nn.Sequential(Stack(),
                                 *(list(mdl.children())[:-2]),
                                 nn.AdaptiveAvgPool2d(output_size),
                                 Flatten())
-    return model
+    out_size = 512*output_size[0]*output_size[1]
+    return net, out_size
 
 
 def create_vgg16_atn(output_size=(2,2)):

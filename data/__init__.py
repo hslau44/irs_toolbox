@@ -29,16 +29,15 @@ def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
     return dataloader
 
 
+# ---------------------------------------------------------Helper--------------------------------------------------------------------
 
-
-def process_lab_data(X1,X2,y,joint='first',sampling='weight',batch_size=64,num_workers=0,lb=None):
+def split_datasets(X1,X2,y):
     X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
     X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)
     X1_train, X1_test, X2_train, X2_test, y_train, y_test = train_test_split(X1,X2,y,train_size=0.8,stratify=y)
-    ### pretrain_loader
-    pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
-    ### lab_finetune
-    ### joining
+    return X1_train, X1_test, X2_train, X2_test, y_train, y_test
+
+def select_train_test_dataset(X1_train, X1_test, X2_train, X2_test, y_train, y_test, joint):
     if joint == 'joint':
         X_train = np.concatenate((X1_train,X2_train))
         y_train = np.concatenate((y_train,y_train))
@@ -56,33 +55,71 @@ def process_lab_data(X1,X2,y,joint='first',sampling='weight',batch_size=64,num_w
         y_test = y_test
     else:
         raise ValueError("Must be in {'joint','first','second'}")
-    ### filterning
-    X_train,y_train = where(X_train,y_train,condition=(y_train != 'waving'))
-    X_train,y_train = where(X_train,y_train,condition=(y_train != 'standff'))
-    X_test,y_test = where(X_test,y_test,condition=(y_test != 'waving'))
-    X_test,y_test = where(X_test,y_test,condition=(y_test != 'standff'))
+    return X_train, X_test, y_train, y_test
+
+
+def filtering_activities_and_label_encoding(X_train, X_test, y_train, y_test, activities):
+    for activity in activities:
+        X_train,y_train = where(X_train,y_train,condition=(y_train != activity))
+        X_test,y_test = where(X_test,y_test,condition=(y_test != activity))
     y_train,lb = label_encode(y_train)
     y_test,lb = label_encode(y_test,enc=lb)
-    
-    ### sampling
+    return X_train, X_test, y_train, y_test, lb
+
+
+def apply_sampling(X_train, X_test, y_train, y_test, sampling, lb):
     class_weight = None
     if isinstance(sampling,int):
         idx = resampling_(y_train,oversampling=False)
         X_train,_,y_train,_ = train_test_split(X_train[idx],y_train[idx],train_size=len(lb.classes_)*sampling,stratify=y_train[idx])
-        finetune_loader = create_dataloader(X_train,label=y_train,batch_size=y_train.shape[0],num_workers=num_workers)
-        validatn_loader  = create_dataloader(X_test,label=y_test, batch_size=y_test.shape[0],num_workers=num_workers)
+
     else:
         if sampling == 'resampling':
             X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=True)
             X_test, y_test = resampling(X_test, y_test, labels=y_test,oversampling=False)
+        elif sampling == 'weight':
+            pass
+    return X_train, X_test, y_train, y_test
+
+
+def prepare_dataloaders(X_train, X_test, y_train, y_test, sampling, batch_size, num_workers):
+    if isinstance(sampling,int):
+        finetune_loader = create_dataloader(X_train,label=y_train,batch_size=y_train.shape[0],num_workers=num_workers)
+        validatn_loader  = create_dataloader(X_test,label=y_test, batch_size=y_test.shape[0],num_workers=num_workers)
+    else:
         finetune_loader = create_dataloader(X_train,label=y_train,batch_size=batch_size,num_workers=num_workers)
         validatn_loader  = create_dataloader(X_test,label=y_test,batch_size=y_test.shape[0],num_workers=num_workers)
-    class_weight = torch.FloatTensor([1-w for w in pd.Series(y_train).value_counts(normalize=True).sort_index().tolist()])
+    return finetune_loader,validatn_loader
+
+
+def return_class_weight(y_train):
+    return torch.FloatTensor([1-w for w in pd.Series(y_train).value_counts(normalize=True).sort_index().tolist()])
+
+
+def combine1(X_train, X_test, y_train, y_test, sampling, lb, batch_size, num_workers):
+    """apply_sampling + prepare_dataloaders + return_class_weight"""
+    X_train, X_test, y_train, y_test = apply_sampling(X_train, X_test, y_train, y_test, sampling, lb)
+    finetune_loader,validatn_loader = prepare_dataloaders(X_train, X_test,y_train, y_test, sampling, batch_size, num_workers)
+    class_weight = return_class_weight(y_train)
+    print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
+    return finetune_loader,validatn_loader, class_weight
+
+
+def process_lab_data(X1,X2,y,joint='first',sampling='weight',batch_size=64,num_workers=0,lb=None):
+    X1_train, X1_test, X2_train, X2_test, y_train, y_test = split_datasets(X1,X2,y)
+    X_train, X_test, y_train, y_test = select_train_test_dataset(X1_train, X1_test, X2_train, X2_test, y_train, y_test, joint)
+    X_train, X_test, y_train, y_test, lb = filtering_activities_and_label_encoding(X_train, X_test, y_train, y_test, activities)
+    X_train, X_test, y_train, y_test = apply_sampling(X_train, X_test, y_train, y_test, sampling)
+    pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
+    finetune_loader,validatn_loader = prepare_dataloaders(X_train, X_test,y_train, y_test, sampling, batch_size, num_workers)
+    class_weight = return_class_weight(y_train)
+    ### Printing 
     print('X1_train: ',X1_train.shape,'\tX2_train: ',X2_train.shape)
     print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
     print("class: ",lb.classes_)
     print("class_size: ",1-class_weight)
     return pretrain_loader, finetune_loader, validatn_loader, lb, class_weight
+
 
 
 def process_field_data(X,y,num=1,lb=None):
