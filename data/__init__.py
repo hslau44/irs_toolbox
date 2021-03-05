@@ -18,27 +18,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 
-def load_data(modality,directory):
-    # pair data
-    if mode == 'single' or mode == 'double':
-        if mode == 'single':
-            X1,X2,y = import_pair_data(directory)
-        elif mode == 'double':
-            X1,X2,y = import_CsiPwr_data(directory)
-        # processing
-        y,lb = label_encode(y)
-        X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
-        X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)
-        return X1,X2,y,lb
-    # single data
-    elif mode == None:
-        X,y = import_data(directory)
-        X = X.reshape(*X.shape,1).transpose(0,3,1,2)
-        y,lb = label_encode(y)
-        return X,y,lb
-    else:
-        raise ValueError("Must be in {'single','double',None}")
-    return
+
 
 def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
     tensors = [torch.Tensor(arr) for arr in arrays]
@@ -49,9 +29,11 @@ def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
     return dataloader
 
 
-def prepare_lab_dataloaders(X1,X2,y,joint='first',sampling='weight',batch_size=64,num_workers=0,lb=None):
+
+
+def process_lab_data(X1,X2,y,joint='first',sampling='weight',batch_size=64,num_workers=0,lb=None):
     X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
-    X2 = X1.reshape(*X2.shape,1).transpose(0,3,1,2)
+    X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)
     X1_train, X1_test, X2_train, X2_test, y_train, y_test = train_test_split(X1,X2,y,train_size=0.8,stratify=y)
     ### pretrain_loader
     pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
@@ -67,6 +49,13 @@ def prepare_lab_dataloaders(X1,X2,y,joint='first',sampling='weight',batch_size=6
         y_train = y_train
         X_test = X1_test
         y_test = y_test
+    elif joint == 'second':
+        X_train = X2_train
+        y_train = y_train
+        X_test = X2_test
+        y_test = y_test
+    else:
+        raise ValueError("Must be in {'joint','first','second'}")
     ### filterning
     X_train,y_train = where(X_train,y_train,condition=(y_train != 'waving'))
     X_train,y_train = where(X_train,y_train,condition=(y_train != 'standff'))
@@ -96,10 +85,10 @@ def prepare_lab_dataloaders(X1,X2,y,joint='first',sampling='weight',batch_size=6
     return pretrain_loader, finetune_loader, validatn_loader, lb, class_weight
 
 
-def prepare_field_dataloaders(X,y,num=1,lb=None):
+def process_field_data(X,y,num=1,lb=None):
     """num: number of sample per class in finetuning dataloader"""
     X = X.reshape(*X.shape,1).transpose(0,3,1,2)
-    y,lb = label_encode(y_exp3)
+    y,lb = label_encode(y,lb)
     idx = resampling_(y,oversampling=False)
     X_finetune, X_validatn, y_finetune, y_validatn = train_test_split(X[idx],y[idx],train_size=len(lb.classes_)*num,stratify=y[idx])
     finetune_loader = create_dataloader(X_finetune, label=y_finetune,batch_size=y_finetune.shape[0],num_workers=0)
@@ -110,7 +99,24 @@ def prepare_field_dataloaders(X,y,num=1,lb=None):
     return finetune_loader,validatn_loader,lb
 
 
+
+def prepare_lab_dataloaders(fp,modality,joint='first',sampling='weight',batch_size=64,num_workers=0,lb=None):
+    X1,X2,y = import_pair_data(fp,modal=['csi',modality])
+    pretrain_loader, finetune_loader, validatn_loader, lb, class_weight = process_lab_data(X1,X2,y,joint,sampling,batch_size,num_workers,lb)
+    return pretrain_loader, finetune_loader, validatn_loader, lb, class_weight
+
+
+def prepare_field_dataloaders(fp,num=1,lb=None):
+    X,y = import_data(fp)
+    finetune_loader,validatn_loader,lb = process_field_data(X,y,num=num,lb=lb)
+    return finetune_loader,validatn_loader,lb
+
+
+
 def prepare_single_source(directory,axis=3,train_size=0.8,sampling='weight',batch_size=64,num_workers=0):
+    """
+    TBD
+    """
     ### import data
     X,y = import_data(directory)
     ### add and transpose axis
@@ -153,6 +159,8 @@ def prepare_double_source(directory,modality='single',axis=1,train_size=0.8,join
         'double' for csi-pwr
     axis (int): the axis of the channel for CNN
 
+
+    TBD
     """
     ### import data
     print('modality:',modality)
