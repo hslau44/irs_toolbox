@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from torchvision.models import resnet18, vgg16
+from torchvision.models import resnet18, vgg16, alexnet
 from functools import partial
 from models.utils import *
 from models.baseline import Encoder

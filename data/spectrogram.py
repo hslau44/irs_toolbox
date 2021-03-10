@@ -84,7 +84,11 @@ def import_pair_data(directory,modal=['csi','nuc2']):
     """
     print("Importing Data ",end='')
     data = {'X1':[],'X2':[],'y':[]}
-    for label in os.listdir(directory):
+    label_ls = os.listdir(directory)
+    if '.ipynb_checkpoints' in label_ls:
+        label_ls.remove('.ipynb_checkpoints')
+    
+    for label in label_ls:
         print('>',end='')
         # selcting available pairs
         pfiles_nuc1 = [f.split('.')[0] for f in os.listdir(directory+'/'+label+'/'+modal[0])]

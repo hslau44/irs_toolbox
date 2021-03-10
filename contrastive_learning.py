@@ -62,7 +62,7 @@ def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device =
         criterion = criterion.to(device)
 
     print('Start Training')
-    record = {'train':[]}
+    record = {'loss':[]}
     i = start
     #Loop
     while i <= end:
@@ -85,7 +85,7 @@ def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device =
 
         # One epoch completed
         loss = loss.tolist()
-        record['train'].append(loss)
+        record['loss'].append(loss)
         print(f' loss: {loss} ')
 
         i += 1

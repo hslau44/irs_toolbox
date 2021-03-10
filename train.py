@@ -61,7 +61,7 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
         model = model.to(device)
 
     print('Start Training')
-    record = {'train':[],'validation':[]}
+    record = {'loss':[],'accuracy':[],'f1_weighted':[],'f1_macro':[]}
     i = start
     #Loop
     while i <= end:
@@ -96,12 +96,15 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
 
         # One epoch completed
         loss = loss.tolist()
-        record['train'].append(loss)
+        record['loss'].append(loss)
         print(f' loss: {loss} ',end='')
         if (test_loader != None) and i%10 ==0 :
             acc = short_evaluation(model,test_loader,device)
-            record['validation'].append(acc)
-            print(f' accuracy: {acc}')
+            record['accuracy'].append(acc['accuracy'])
+            record['f1_weighted'].append(acc['f1_weighted'])
+            record['f1_macro'].append(acc['f1_macro'])
+            display = acc['accuracy']
+            print(f" accuracy: {display}")
         else:
             print('')
         i += 1
@@ -114,11 +117,14 @@ def short_evaluation(model,test_loader,device):
     # copy the model to cpu
     if device:
         model = model.cpu()
+    acc = {'accuracy':0,'f1_weighted':0,'f1_macro':0}
     with torch.no_grad():
         for X_test, y_test in test_loader:
             y_val = model(X_test)
             predicted = torch.max(y_val, 1)[1]
-            acc = f1_score(y_test.view(-1), predicted.view(-1),average='weighted')
+            acc['accuracy'] = accuracy_score(y_test.view(-1), predicted.view(-1))
+            acc['f1_weighted'] = f1_score(y_test.view(-1), predicted.view(-1),average='weighted')
+            acc['f1_macro'] = f1_score(y_test.view(-1), predicted.view(-1),average='macro')
     # send model back to gpu
     if device:
         model = model.to(device)
