@@ -29,7 +29,7 @@ class Attention(nn.Module):
         a = torch.relu(a)
         a = F.softmax(a,dim=1)
         return a*X
-    
+
 def create_baseline_encoder(num_filters=[32,64,96],scale_factor=1):
     """
     VGG 16 for 1 channel image, output: 512*output_size
@@ -66,7 +66,7 @@ def create_vgg16(output_size=(2,2)):
     """
     net = vgg16()
     net = torch.nn.Sequential(Stack(),
-                                *(list(mdl.children())[:-2]),
+                                *(list(net.children())[:-2]),
                                 nn.AdaptiveAvgPool2d(output_size),
                                 Flatten())
     out_size = 512*output_size[0]*output_size[1]
