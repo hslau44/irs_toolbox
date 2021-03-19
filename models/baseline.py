@@ -99,3 +99,37 @@ class Encoder_F(nn.Module):
         X = torch.flatten(X, 1)
 
         return X
+
+class SimpleCNN(nn.Module):
+    """
+    Simple Conv2d NN
+
+    parameter:
+    setting (str): must be either {'1st','2nd'}
+    """
+    def __init__(self,setting='1st'):
+        super(SimpleCNN, self).__init__()
+        if setting == '1st':
+            num_filter,kernel_size,latent = 32,5,238080
+        elif setting == '2nd':
+            num_filter,kernel_size,latent = 64,2,512000
+        else:
+            raise ValueError("setting must be either {'1st','2nd'}")
+        ### 1st ###
+        self.conv1 = nn.Conv2d(1,num_filter,kernel_size)
+        self.actv_cnn = nn.ReLU()
+        self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
+        self.dropout_cnn = nn.Dropout(p=0.2)
+        self.linear1 = nn.Linear(latent,256)
+        self.actv_1 = nn.ReLU()
+        self.linear2 = nn.Linear(256,128)
+        self.actv_2 = nn.ReLU()
+        self.linear3 = nn.Linear(128,6)
+
+    def forward(self,X):
+        X = self.dropout_cnn(self.pool1(self.actv_cnn(self.conv1(X))))
+        X = torch.flatten(X, 1)
+        X = self.actv_1(self.linear1(X))
+        X = self.actv_2(self.linear2(X))
+        X = self.linear3(X)
+        return X
