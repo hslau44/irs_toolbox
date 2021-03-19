@@ -12,7 +12,6 @@ from torch import Tensor, nn
 from torch.nn import functional as F
 
 from data import prepare_single_source
-from models import create_baseline_model
 
 
 
@@ -183,99 +182,44 @@ def load_checkpoint(model,optimizer,filepath):
 
 # -----------------------------------------helper---------------------------------------
 
-def record_log(main_name,epochs,record='None',cmtx='None',cls='None',filepath='./record/'):
-    path = make_directory(main_name,epoch=epochs,filepath=filepath)
+# def record_log(main_name,epochs,record='None',cmtx='None',cls='None',filepath='./record/'):
+#     path = make_directory(main_name,epoch=epochs,filepath=filepath)
+#     if type(record) != str:
+#         pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
+#     if type(cmtx) != str:
+#         if  type(record) != str:
+#             pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
+#         cmtx.to_csv(path+'_cmtx.csv')
+#     if type(cls) != str:
+#         cls.to_csv(path+'_report.csv')
+#     return
+
+def record_log(record_outpath,exp_name,phase,record='None',cmtx='None',cls='None',loss_rec=True,acc_rec=False):
+    prefix = record_outpath+'/'+exp_name+'_Phase_'+phase
     if type(record) != str:
-        pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
+        if loss_rec:
+            pd.DataFrame(record['loss'],columns=['loss']).to_csv(prefix+'_loss.csv')
+        if acc_rec: 
+            df = pd.concat((pd.DataFrame(record['accuracy']),
+                            pd.DataFrame(record['f1_weighted']),
+                            pd.DataFrame(record['f1_macro'])),
+                            axis=1)
+            df.columns = ['accuracy','f1_weighted','f1_macro']
+            df.to_csv(prefix+'_accuracy.csv')
     if type(cmtx) != str:
-        if  type(record) != str:
-            pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
-        cmtx.to_csv(path+'_cmtx.csv')
+        cmtx.to_csv(prefix+'_cmtx.csv')
     if type(cls) != str:
-        cls.to_csv(path+'_report.csv')
+        cls.to_csv(prefix+'_report.csv')
     return
 
-def save(main_name,model,optimizer,epochs,filepath='./models/saved_models/'):
-    path = make_directory(main_name,epoch=epochs,filepath=filepath)
-    save_checkpoint(model, optimizer, epochs, path)
-    return
 
-# ---------------------------------------fast model setup-------------------------------------------
+def save_model(model_outpath,exp_name,phase,model):
+    model_fp = model_outpath+'/'+exp_name+'_Phase_'+phase
+    torch.save(model.state_dict(), model_fp)
+    return model_fp
 
-from models.baseline import Encoder,Classifier
-from models.utils import Lambda,ED_module
-from models import add_classifier
-
-
-# class Encoder(nn.Module):
-#     """
-#     Three layer Encoder for spectrogram (1,65,65), 3 layer
-#     """
-#     def __init__(self,num_filters):
-#         super(Encoder, self).__init__()
-#         l1,l2,l3 = num_filters
-#         ### 1st ###
-#         self.conv1 = nn.Conv2d(1,l1,kernel_size=5,stride=1)
-#         self.norm1 = nn.BatchNorm2d(l1) # nn.BatchNorm2d()
-#         self.actv1 = nn.ReLU()
-#         self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
-#         ### 2nd ###
-#         self.conv2 = nn.Conv2d(l1,l2,kernel_size=4,stride=2)
-#         self.norm2 = nn.BatchNorm2d(l2)
-#         self.actv2 = nn.ReLU()
-#         self.pool2 = nn.MaxPool2d(kernel_size=(2,2))
-#         ### 3rd ###
-#         self.conv3 = nn.Conv2d(l2,l3,kernel_size=3,stride=3)
-#         self.norm3 = Lambda(lambda x:x)
-#         self.actv3 = nn.Tanh()
-#         self.pool3 = nn.MaxPool2d(kernel_size=(2,2))
-#
-#     def forward(self,X):
-#         X = self.pool1(self.actv1(self.norm1(self.conv1(X))))
-#         X = self.pool2(self.actv2(self.norm2(self.conv2(X))))
-#         X = self.pool3(self.actv3(self.norm3(self.conv3(X))))
-#         X = torch.flatten(X, 1)
-#         # print(X.shape)
-#         return X
-
-def create_baseline():
-    size = 96
-    enc = Encoder([32,64,size])
-    clf = Classifier(size*10,128,5)
-    model = ED_module(enc,clf)
-    return model
 
 
 # -----------------------------------Main-------------------------------------------
 
 
-
-def main():
-    model = create_baseline()
-    train_loader,test_loader,lb,class_weight = prepare_single_source(directory=DIRC,
-                                                                     axis=AXIS,
-                                                                     train_size=TRAIN_SIZE,
-                                                                     sampling=SAMPLING,
-                                                                     batch_size=BATCH_SIZE,
-                                                                     num_workers=NUM_WORKERS)
-    criterion = nn.CrossEntropyLoss(weight=class_weight).to(DEVICE)
-    optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
-    model, record = train(model=model,
-                          train_loader=train_loader,
-                          criterion=criterion,
-                          optimizer=optimizer,
-                          end=NUM_EPOCHS,
-                          start = 1,
-                          test_loader = test_loader,
-                          device = DEVICE,
-                          regularize = REGULARIZE)
-    cmtx,cls = evaluation(model,test_loader,label_encoder=lb)
-    if output:
-        record_log(MAIN_NAME,NUM_EPOCHS,record,cmtx=cmtx,cls=cls)
-        save(MAIN_NAME,model,optimizer,NUM_EPOCHS)
-    return
-
-
-
-if __name__ == '__main__':
-    main()

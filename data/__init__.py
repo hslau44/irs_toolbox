@@ -31,6 +31,11 @@ def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
 
 # ---------------------------------------------------------Helper--------------------------------------------------------------------
 
+def initial_filtering_activities(datas, activities):
+    for activity in activities:
+        datas = where(*datas,condition=(datas[-1] != activity))
+    return datas
+
 def split_datasets(X1,X2,y,split=0.8,stratify=None):
     X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
     X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)

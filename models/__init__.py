@@ -16,6 +16,13 @@ def freeze_network(model):
     return model
 
 
+def add_classifier(enc,in_size,out_size,freeze):
+    if freeze == True:
+        enc = freeze_network(enc)
+    clf = Classifier(in_size,128,out_size)
+    model = ED_module(encoder=enc,decoder=clf)
+    return model
+
 def add_SimCLR(enc,out_size):
     """
     enc: encoder(nn.Module)
@@ -25,26 +32,59 @@ def add_SimCLR(enc,out_size):
     model = SimCLR(enc,clf)
     return model
 
-
-def add_classifier(enc,in_size,out_size,freeze):
-    if freeze == True:
-        enc = freeze_network(enc)
-    clf = Classifier(in_size,128,out_size)
-    model = ED_module(encoder=enc,decoder=clf)
-    return model
-
-
-
-def create_baseline_model():
-    out = 96
-    enc = Encoder([32,64,out])
-    model = add_classifier(enc,out_size=10*out,freeze=False)
-    return model
-
-
 def add_SimCLR_multi(enc1,enc2,out_size1,out_size2):
 
     dec1 = Projection_head(out_size1,128,head='linear')
     dec2 = Projection_head(out_size2,128,head='linear')
     model = SimCLR_multi(enc1, enc2, dec1, dec2)
     return model
+
+# def create_baseline_model():
+#     out = 96
+#     enc = Encoder([32,64,out])
+#     model = add_classifier(enc,out_size=10*out,freeze=False)
+#     return model
+
+def create_encoder(network,pairing):
+    if network == "shallow":
+        if pairing == 'csi':
+            encoder = create_baseline_encoder(scale_factor=1)
+            outsize = 960
+        elif pairing == 'nuc2':
+            encoder = create_baseline_encoder(scale_factor=1)
+            outsize = 960
+        elif pairing == 'pwr':
+            encoder = create_baseline_encoder(scale_factor=3)
+            outsize = 1152
+        else: 
+            raise ValueError("pairing must be in {'csi','nuc2','pwr'}")
+    elif network == "alexnet":
+        if pairing == 'csi':
+            encoder,outsize = create_alexnet((1,4),scale_factor=1)
+        elif pairing == 'nuc2':
+            encoder,outsize = create_alexnet((1,4),scale_factor=1)
+        elif pairing == 'pwr':
+            encoder,outsize = create_alexnet((4,1),scale_factor=2)
+        else: 
+            raise ValueError("pairing must be in {'csi','nuc2','pwr'}")
+    elif network == "resnet":
+        if pairing == 'csi':
+            encoder,outsize = create_resnet18((2,2))
+        if pairing == 'nuc2':
+            encoder,outsize = create_resnet18((2,2))
+        elif pairing == 'pwr':
+            encoder,outsize = create_resnet18((2,2))
+        else: 
+            raise ValueError("pairing must be in {'csi','nuc2','pwr'}")
+    elif network == "vgg16":
+        if pairing == 'csi':
+            encoder,outsize = create_vgg16((2,2))
+        if pairing == 'nuc2':
+            encoder,outsize = create_vgg16((2,2))
+        elif pairing == 'pwr':
+            encoder,outsize = create_vgg16((2,2))
+        else: 
+            raise ValueError("pairing must be in {'csi','nuc2','pwr'}")
+    else:
+        raise ValueError("network must be in {'shallow','alexnet','resnet'}")
+    return encoder, outsize
