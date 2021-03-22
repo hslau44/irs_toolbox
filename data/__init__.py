@@ -36,10 +36,14 @@ def initial_filtering_activities(datas,condition_idx=2, activities=[]):
         datas = where(*datas,condition=(datas[2] != activity))
     return datas
 
-def split_datasets(X1,X2,y,split=0.8,stratify=None):
+def split_datasets(X1,X2,y,by='random',split=0.8,stratify=None,id_ls=None,validation_id=5):
     X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
     X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)
-    X1_train, X1_test, X2_train, X2_test, y_train, y_test = train_test_split(X1,X2,y,train_size=split,stratify=stratify)
+    if by == 'random':
+        X1_train, X1_test, X2_train, X2_test, y_train, y_test = train_test_split(X1,X2,y,train_size=split,stratify=stratify)
+    elif by == 'id':
+        X1_train, X2_train, y_train = where(X1,X2,y,condition=(id_ls != validation_id))
+        X1_test,  X2_test,  y_test  = where(X1,X2,y,condition=(id_ls == validation_id))
     return X1_train, X1_test, X2_train, X2_test, y_train, y_test
 
 def select_train_test_dataset(X1_train, X1_test, X2_train, X2_test, y_train, y_test, joint):
