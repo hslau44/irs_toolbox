@@ -31,9 +31,9 @@ def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
 
 # ---------------------------------------------------------Helper--------------------------------------------------------------------
 
-def initial_filtering_activities(datas, activities):
+def initial_filtering_activities(datas,condition_idx=2, activities=[]):
     for activity in activities:
-        datas = where(*datas,condition=(datas[-1] != activity))
+        datas = where(*datas,condition=(datas[2] != activity))
     return datas
 
 def split_datasets(X1,X2,y,split=0.8,stratify=None):
@@ -86,20 +86,20 @@ def apply_sampling(X_train, X_test, y_train, y_test, sampling, lb, y_sampling=Fa
     if isinstance(sampling,int):
         idx = resampling_(y_train,oversampling=False)
         X_train,_,y_train,_ = train_test_split(X_train[idx],y_train[idx],train_size=len(lb.classes_)*sampling,stratify=y_train[idx])
-    elif sampling == 'oversampling': 
+    elif sampling == 'oversampling':
         X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=True)
     elif sampling == 'undersampling':
         X_train, y_train = resampling(X_train, y_train, labels=y_train,oversampling=False)
     elif sampling == 'weight':
         pass
-            
-    if y_sampling == 'oversampling': 
+
+    if y_sampling == 'oversampling':
         X_test, y_test = resampling(X_test, y_test, labels=y_test,oversampling=True)
     elif y_sampling == 'undersampling':
         X_test, y_test = resampling(X_test, y_test, labels=y_test,oversampling=False)
     else:
         pass
-    
+
     return X_train, X_test, y_train, y_test
 
 
@@ -134,7 +134,7 @@ def process_lab_data(X1,X2,y,joint='first',sampling='weight',batch_size=64,num_w
     pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=batch_size,num_workers=num_workers)
     finetune_loader,validatn_loader = prepare_dataloaders(X_train, X_test,y_train, y_test, sampling, batch_size, num_workers)
     class_weight = return_class_weight(y_train)
-    ### Printing 
+    ### Printing
     print('X1_train: ',X1_train.shape,'\tX2_train: ',X2_train.shape)
     print('X_train: ',X_train.shape,'\ty_train: ',y_train.shape,'\tX_test: ',X_test.shape,'\ty_test: ',y_test.shape)
     print("class: ",lb.classes_)
@@ -302,5 +302,3 @@ def prepare_dummy():
         return pretrain_loader, finetune_loader, validatn_loader, lb, class_weight
     else:
         return pretrain_loader, finetune_loader, validatn_loader, lb
-
-
