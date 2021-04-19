@@ -97,71 +97,99 @@ def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device =
     return model, record
 
 
-# def create_encoder():
-# #     outsize = 960
-# #     encoder = Baseline_Encoder([32,64,96])
-# #     outsize = 1920
-# #     encoder = Baseline_Encoder([64,128,192])
-#     encoder = create_vgg16((2,2))
-#     outsize = 512*2*2
-#     return encoder, outsize
+def phase_lab_pretraining():
 
-# def create_encoders():
-#     outsize = 512*2*2 
-#     encoder = create_vgg16((2,2))  
-#     outsize2 = 512*3*1 
-#     encoder2 = create_vgg16((3,1))
-#     return encoder,encoder2,outsize,outsize2
+    # create dataloader for pretraining  
+    print('X1_train: ',X1_train.shape,'\tX2_train: ',X2_train.shape)
+    pretrain_loader = create_dataloader(X1_train,X2_train,batch_size=pre_batch_size,num_workers=num_workers)
+    encoder, outsize = create_encoder(network,'nuc2')
+    encoder2, outsize2 = None,None
 
+    # the pairing data use the same encoder if 'joint', else we use two encoders
+    if joint == 'joint':
+        simclr = add_SimCLR(encoder, outsize)
+    else:
+        encoder2, outsize2 = create_encoder(network,pairing)
+        simclr = add_SimCLR_multi(enc1=encoder,enc2=encoder2,out_size1=outsize,out_size2=outsize2)
+
+    # (optional) pretraining with simclr  
+    phase = 'pretrain'
+    if trainmode == 'simclr':
+        criterion = NT_Xent(pre_batch_size, temperature, world_size=1)
+        optimizer = torch.optim.SGD(list(simclr.parameters()), lr=0.0005)
+        simclr, record = pretrain(model=simclr,
+                                  train_loader=pretrain_loader,
+                                  criterion=criterion,
+                                  optimizer=optimizer,
+                                  end=pretrain_epochs,
+                                  device=device)
+        record_log(record_outpath,exp_name,phase,record=record)
+
+    # save
+    encoder_fp = save_model(model_outpath,exp_name,phase,simclr.encoder)
+    del simclr,encoder,outsize, encoder2,outsize2
+    torch.cuda.empty_cache()
+    return encoder_fp
+    
+
+def phase_lab_finetuning():
+    # sampling condition
+    samplings = [1,5,10,'weight','undersampling','oversampling',]
+    inital = {'lab':True} 
+    
+    for sampling in samplings:
+
+        # decided whether the dataset should be joined together
+        X_train, X_test, y_train, y_test = select_train_test_dataset(X1_train, X1_test, X2_train, X2_test, y_train_, y_test_, joint)
+        X_train, X_test, y_train, y_test, lb = filtering_activities_and_label_encoding(X_train, X_test, y_train, y_test, activities)
+        lab_finetune_loader, lab_validatn_loader, class_weight = combine1(X_train, X_test, y_train, y_test, 
+                                                                          sampling, lb, batch_size, num_workers, 
+                                                                          y_sampling=y_sampling)
+        print("class: ",lb.classes_)
+        print("class_size: ",1-class_weight)
+
+        # load the encoder
+        encoder, outsize = load_encoder(network, encoder_fp)
+        model = add_classifier(encoder,in_size=outsize,out_size=len(lb.classes_),freeze=freeze)
+
+        # evaluate the untrained network  
+        phase = 'lab-initial'
+        if inital['lab']:
+            cmtx,cls = evaluation(model,lab_finetune_loader,label_encoder=lb)
+            record_log(record_outpath,exp_name,phase,cmtx=cmtx,cls=cls)
+            inital['lab'] = False
+
+        # finetuning 
+        phase = 'lab-finetune'+'-'+str(sampling)
+        criterion = nn.CrossEntropyLoss(weight=class_weight).to(device)
+        optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
+        model, record = train(model=model,
+                              train_loader= lab_finetune_loader,
+                              criterion=criterion,
+                              optimizer=optimizer,
+                              end= lab_finetune_epochs,
+                              test_loader = lab_validatn_loader,
+                              device = device,
+                              regularize = regularize)
+
+        # test and record
+        cmtx,cls = evaluation(model,lab_validatn_loader,label_encoder=lb)
+        record_log(record_outpath,exp_name,phase,record=record,cmtx=cmtx,cls=cls,acc_rec=True)
+
+        # every loop the model (including encoder),criterion,optimizer are to be deleted 
+        if sampling != 'weight':
+            del encoder,model,criterion,optimizer,record,cmtx,cls
+            torch.cuda.empty_cache()
+        elif sampling == 'weight':
+            # model_fp = save_model(model_outpath,exp_name,phase,model)
+            del encoder,model,criterion,optimizer,record,cmtx,cls
+            torch.cuda.empty_cache()
+    
+        return 
+    
+    
 
 def main():
-    
-    if m == 'single':
-        encoder, outsize = create_encoder()
-        model = add_SimCLR(encoder,outsize)
-    elif m == 'double':
-        encoder,encoder2,outsize,outsize2 = create_encoders()
-        model = add_SimCLR_multi(encoder,encoder2,outsize,outsize2)
-    pretrain_loader, finetune_loader, validatn_loader, lb, class_weight = prepare_double_source(directory=DIRC,
-                                                                                                modality=MODALITY,
-                                                                                                axis=AXIS,
-                                                                                                train_size=TRAIN_SIZE,
-                                                                                                joint=JOINT,
-                                                                                                p=PER,
-                                                                                                sampling=SAMPLING,
-                                                                                                batch_size=BATCH_SIZE,
-                                                                                                num_workers=NUM_WORKERS)
-    criterion = NT_Xent(BATCH_SIZE, temperature=TEMPERATURE, world_size=1)
-    optimizer = torch.optim.SGD(list(model.parameters()), lr=0.0005)
-    pretrain_output = PRETRAIN_EPOCHS
-    if pretrain_output > 0:
-        model, record = pretrain(model=model,
-                                 train_loader=pretrain_loader,
-                                 criterion=criterion,
-                                 optimizer=optimizer,
-                                 end=PRETRAIN_EPOCHS,
-                                 start=1,
-                                 device=DEVICE)
-        if output:
-            record_log(MAIN_NAME,PRETRAIN_EPOCHS,record,filepath=OUT_PATH+'/record/')
-    del criterion,optimizer,pretrain_loader
-    # Finetuning
-    model = add_classifier(model.encoder,outsize,freeze=FREEZE)
-    criterion = nn.CrossEntropyLoss(weight=class_weight).to(DEVICE)
-    optimizer = torch.optim.Adam(list(model.parameters()), lr=0.0005)
-    model, record = train(model=model,
-                          train_loader=finetune_loader,
-                          criterion=criterion,
-                          optimizer=optimizer,
-                          end=FINETUNE_EPOCHS,
-                          start = 1,
-                          test_loader = validatn_loader,
-                          device = DEVICE,
-                          regularize = REGULARIZE)
-    cmtx,cls = evaluation(model,validatn_loader,label_encoder=lb)
-    if output:
-        record_log(MAIN_NAME,FINETUNE_EPOCHS,record,cmtx=cmtx,cls=cls)
-        save(MAIN_NAME,model,optimizer,FINETUNE_EPOCHS)
     return
 
 if __name__ == '__main__':
