@@ -22,7 +22,7 @@ np.random.seed(1024)
 torch.manual_seed(1024)
 
 # gpu setting
-DEVICE = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = DEVICE
 torch.cuda.set_device(DEVICE)
 
