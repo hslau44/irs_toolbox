@@ -21,6 +21,18 @@ from sklearn.utils import shuffle
 
 
 def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
+    """
+    Create pytorch data loader from arrays
+
+    Arguments:
+    arrays(numpy.ndarray)
+    label(numpy.ndarray/str): the corresponding label for array
+    batch_size(int): batch in_size
+    num_workers: number of workers for dataloader
+
+    Return:
+    dataloader(torch.utils.DataLoader)
+    """
     tensors = [torch.Tensor(arr) for arr in arrays]
     if type(label)!=str:
         tensors.append(torch.Tensor(label).long())
@@ -32,11 +44,36 @@ def create_dataloader(*arrays,label='None',batch_size=64,num_workers=0):
 # ---------------------------------------------------------Helper--------------------------------------------------------------------
 
 def initial_filtering_activities(datas,condition_idx=2, activities=[]):
+    """
+    remove rows in datas if row in datas[condition_idx] is in acivities
+
+    Arguments:
+    datas(list<numpy.ndarray>)
+    condition_idx(int)
+    activities(list<str>)
+
+    Return:
+    filtered_datas(list<np.ndarray>)
+    """
     for activity in activities:
         datas = where(*datas,condition=(datas[2] != activity))
     return datas
 
 def split_datasets(X1,X2,y,by='random',split=0.8,stratify=None,id_ls=None,validation_id=5):
+    """
+    Argument:
+    X1(numpy.ndarray): modality 1
+    X2(numpy.ndarray): modality 2
+    y(numpy.ndarray): label
+    by(str): method to split data, {'random','id'}
+    split(float): if by='random', size of train set
+    stratify(bool): if by='random', stratify, {True,None}
+    id_ls(numpy.ndarray): array for id
+    validation_id(int): id for test set
+
+    Return:
+    X1_train, X1_test, X2_train, X2_test, y_train, y_test (np.ndarray)
+    """
     X1 = X1.reshape(*X1.shape,1).transpose(0,3,1,2)
     X2 = X2.reshape(*X2.shape,1).transpose(0,3,1,2)
     if by == 'random':
