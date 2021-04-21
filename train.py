@@ -111,6 +111,47 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
     model = model.cpu()
     return model, record
 
+def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device = None):
+    # Check device setting
+    if device:
+        model = model.to(device)
+        criterion = criterion.to(device)
+
+    print('Start Training')
+    record = {'loss':[]}
+    i = start
+    #Loop
+    while i <= end:
+        print(f"Epoch {i}: ", end='')
+        for b, (items) in enumerate(train_loader):
+
+            if device:
+                items = [i.to(device) for i in items]
+
+            print(f">", end='')
+
+            optimizer.zero_grad()
+
+            items = model(items)
+
+            loss = criterion(*items)
+
+            loss.backward()
+            optimizer.step()
+
+        # One epoch completed
+        loss = loss.tolist()
+        record['loss'].append(loss)
+        print(f' loss: {loss} ')
+
+        i += 1
+
+    if device:
+        items = [i.cpu() for i in items]
+        del items
+        model = model.cpu()
+
+    return model, record
 
 def short_evaluation(model,test_loader,device):
     # copy the model to cpu
@@ -199,7 +240,7 @@ def record_log(record_outpath,exp_name,phase,record='None',cmtx='None',cls='None
     if type(record) != str:
         if loss_rec:
             pd.DataFrame(record['loss'],columns=['loss']).to_csv(prefix+'_loss.csv')
-        if acc_rec: 
+        if acc_rec:
             df = pd.concat((pd.DataFrame(record['accuracy']),
                             pd.DataFrame(record['f1_weighted']),
                             pd.DataFrame(record['f1_macro'])),
@@ -221,5 +262,3 @@ def save_model(model_outpath,exp_name,phase,model):
 
 
 # -----------------------------------Main-------------------------------------------
-
-
