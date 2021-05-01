@@ -6,7 +6,6 @@ from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from torch import Tensor
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data import DataLoader, random_split
-from logger import logging
 from torchvision.datasets.folder import ImageFolder
 
 from data.raw_csi import import_clean_data
