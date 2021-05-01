@@ -114,14 +114,14 @@ class NT_Xent_(nn.Module):
         positive_samples = s[self.positive_mask]
         positive_samples = positive_samples.reshape(self.mtx_size,-1)
         positive_samples = torch.cat(torch.split(positive_samples,1,1))
-        print(f'positive shape {positive_samples.shape}')
+        # print(f'positive shape {positive_samples.shape}')
         negative_samples = s[self.negative_mask]
         negative_samples = negative_samples.reshape(self.mtx_size,-1)
         negative_samples = negative_samples.repeat(num_repe-1,1)
-        print(f'negative shape {negative_samples.shape}')
+        # print(f'negative shape {negative_samples.shape}')
         logits = torch.cat((positive_samples, negative_samples), dim=1)
         labels = torch.zeros(logits.shape[0]).long().to(logits.device)
-        print(f'logit shape {logits.shape}')
+        # print(f'logit shape {logits.shape}')
         loss = self.xent(logits, labels)
         loss /= self.mtx_size
         return loss
