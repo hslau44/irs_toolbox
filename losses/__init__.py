@@ -63,32 +63,34 @@ class NT_Xent(nn.Module):
 class Contrastive_multiview_loss(nn.Module):
 
     def __init__(self,loss_func):
+        """
+        Simple implemntation of Full Graph Contrastive Multiview Coding (Tian et.al. 2020)
+
+        Attribute:
+        loss_func (torch.nn.Module): the contrastive loss function
+        """
         super(Contrastive_multiview_loss, self).__init__()
         self.loss_func = loss_func
 
     def forward(self,*vecs):
         loss = sum([self.loss_func(vecs[i],vecs[j]) for i in range(0,len(vecs)-1) for j in range(i+1,len(vecs))])
-#         loss = torch.tensor(0)
-#         for i in range(0,len(vecs)-1):
-#             for j in range(i+1,len(vecs)):
-#                 cur = self.loss_func(vecs[i],vecs[j])
-#                 loss = loss.add(cur)
         return loss
 
 
 
 class NT_Xent_(nn.Module):
-    """
-    NT_Xent with additional support for num_repre (number of representation) > 2
 
-    Attributes:
-    batch_size (int): batch size
-    num_repre (int): number of representation
-    temperature (float): smoothness
-
-    """
 
     def __init__(self,batch_size,num_repre=2,temperature=0.1):
+        """
+        NT_Xent, support for num_repre (number of representation) >= 2
+
+        Attributes:
+        batch_size (int): batch size
+        num_repre (int): number of representation
+        temperature (float): smoothness
+
+        """
         super(NT_Xent_, self).__init__()
         if num_repre < 2:
             raise ValueError('num_repre must be >=2')
