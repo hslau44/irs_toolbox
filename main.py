@@ -25,44 +25,59 @@ from train import record_log,evaluation,pretrain,train,load_checkpoint,save_mode
 
 
 
-PRETRAIN_SKIP = ['waving'] # list of name of activities to be skiped in pretraining
-FINETUNE_SKIP = ['waving'] # list of name of activities to be skiped in finetuning/training
+PRETRAIN_SKIP = ['waving']   # list of name of activities to be skiped in pretraining
+FINETUNE_SKIP = ['waving']   # list of name of activities to be skiped in finetuning/training
 
-EXTRA = None   # add extra string at the end of file for notation
-VAL = 'random'   # validation method; option: 'id', 'random'
+EXTRA = None                 # add extra string at the end of file for notation
+VAL = 'random'               # validation method; option: 'id', 'random'
 
-PRE_BATCH_SIZE = 64          # batch size for simclr
-BATCH_SIZE = 64
-NUM_WORKERS = 0
-PRETRAIN_EPOCHS = 750
-FINETUNE_EPOCHS = 200
+PRE_BATCH_SIZE = 64          # batch size for contrastive pretraining
+BATCH_SIZE = 64              # batch size for finetuning/ standard training
+NUM_WORKERS = 0              # for torch.utils.Dataset
+PRETRAIN_EPOCHS = 750        # epochs for contrastive pretraining
+FINETUNE_EPOCHS = 200        # epochs for finetuning/ standard training
 VAL_ID = 1                   # participant; option: 1,2,3,4,5
 SAMPLING = 'weight'
-REGULARIZE = False
-JOINT = 'first'
-
-fp2 = './data/experiment_data/exp_2/spectrogram'
-fp3 = './data/experiment_data/exp_3/spectrogram'
-fp4 = 'E://external_data/experiment_data/exp_4/spectrogram_multi'
+REGULARIZE = False           # l2 regularization
+JOINT = 'first'              # options: 'first','second','joint'
+t_dic = {'L':0.1,'M':0.5,'H':1,'R':1} # DO NOT EDIT THIS
 
 DATAPATH = 'E://external_data/opera_csi/experiment_data/exp_4/spectrogram_multi'
 OUT_PATH = 'E://external_data/opera_csi/laboratory/experiment_e'
 
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # change to desired cuda location
 torch.cuda.set_device(DEVICE)
 np.random.seed(1024)
 torch.manual_seed(1024)
 
+def load_encoder(network, model_fp):
+    encoder, outsize = create_encoder(network,'nuc2')
+    encoder.load_state_dict(torch.load(model_fp))
+    return encoder, outsize
+
+def set_augs():
+    augs = sys.argv[1:]
+    if len(augs) == 4:
+        trainmode,network,pairing,t = augs
+    elif variables == None:
+        trainmode,network,pairing,t = 'simclr','alexnet','nuc2','L'
+    else:
+        raise ValueError('Expecting number of augments')
+    return trainmode,network,pairing,t
 
 def main():
 
-    trainmode,network,pairing,temperature = sys.argv[1:]
+    trainmode,network,pairing,t = set_augs()
 
-    exp_name = f'Trainmode-{trainmode}-{t}_Network-{network}_Data-exp4csi{pairing}{('-j' if JOINT=='joint')}'
+    temperature = t_dic[t]
+
+    exp_name = f"Trainmode-{trainmode}-{t}_Network-{network}_Data-exp4csi{pairing}{('-j' if JOINT == 'joint' else None)}"
+
+    print(exp_name)
 
     model_outpath = record_outpath = OUT_PATH
 
-    data = import_pair_data(filepath=DATAPATH,modal=['csi',pairing],return_id=True)
+    data = import_pair_data(directory=DATAPATH,modal=['csi',pairing],return_id=True)
 
     X1,X2,y,id_list = initial_filtering_activities(data,activities=PRETRAIN_SKIP)
 
@@ -101,9 +116,9 @@ def main():
         record_log(record_outpath,exp_name,phase,record=record)
     # save
 
-    encoder_fp = save_model(model_outpath,exp_name,phase,simclr.encoder)
+    encoder_fp = save_model(model_outpath,exp_name,phase,pretrain_model.encoder)
 
-    del simclr,encoder,outsize, encoder2,outsize2,criterion,optimizer
+    del pretrain_model,encoder,outsize, encoder2,outsize2
 
     torch.cuda.empty_cache()
 
@@ -111,8 +126,7 @@ def main():
     X_train, X_test, y_train, y_test = select_train_test_dataset(X1_train, X1_test, X2_train, X2_test, y_train, y_test,
                                                                  joint=JOINT)
 
-    X_train, X_test, y_train, y_test, label_encoder = filtering_activities_and_label_encoding(X_train, X_test, y_train, y_test,
-                                                                                              activities=FINETUNE_SKIP)
+    X_train, X_test, y_train, y_test, label_encoder = filtering_activities_and_label_encoding(X_train, X_test, y_train, y_test, FINETUNE_SKIP)
 
     X_train, X_test, y_train, y_test = apply_sampling(X_train, X_test, y_train, y_test, lb=label_encoder,
                                                       sampling=SAMPLING,y_sampling='weight')
@@ -155,9 +169,6 @@ def main():
     torch.cuda.empty_cache()
 
     return
-
-
-
 
 if __name__ == '__main__':
     main()
