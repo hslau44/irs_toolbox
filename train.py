@@ -47,13 +47,44 @@ output = OUT_PATH
 
 
 def reg_loss(model,device,factor=0.0005):
+    """
+    l2 regularization loss
+
+    Arguments
+    model (torch.nn.Module): the model
+    device (str): the device whic the model is allocated
+    factor (float): factor
+
+    Return:
+    loss (torch.Tensor): l2 regularization loss
+    """
     l2_reg = torch.tensor(0.).to(device)
     for param in model.parameters():
         l2_reg += torch.norm(param)
-    return factor * l2_reg
+    loss = factor * l2_reg
+    return loss
 
 
 def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader = None, device = None, regularize = None, **kwargs):
+    """
+    training Loop
+
+    Arguments
+    model (torch.nn.Module): the model
+    train_loader (torch.utils.Dataset): torch.utils.Dataset of the training set
+    criterion (nn.Module): the loss function
+    optimizer (torch.optim): the optimizer to backpropagate the network
+    end (int): the epoch which the loop end after
+    start (int): the epoch which the loop start at
+    test_loader (torch.utils.Dataset): torch.utils.Dataset of the test set
+    regularize (bool): add l2 regularization loss on top of the total loss
+    device (str): the device whic the model is allocated
+
+    Returns:
+    model (torch.nn.Module): trained model
+    record (dict): the record of the training, currently have
+    'loss' (every epoch), 'accuracy' (every 10 epochs),'f1_weighted' (every 10 epochs),'f1_macro (every 10 epochs)'
+    """
 
     # Check device setting
     if device:
@@ -112,6 +143,23 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
     return model, record
 
 def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device = None):
+    """
+    pretraining Loop
+
+    Arguments
+    model (torch.nn.Module): the model
+    train_loader (torch.utils.Dataset): torch.utils.Dataset of the training set
+    criterion (nn.Module): the loss function
+    optimizer (torch.optim): the optimizer to backpropagate the network
+    end (int): the epoch which the loop end after
+    start (int): the epoch which the loop start at
+    device (str): the device whic the model is allocated
+
+    Returns:
+    model (torch.nn.Module): pretrained model
+    record (dict): the record of the training, currently have
+    'loss' (every epoch)
+    """
     # Check device setting
     if device:
         model = model.to(device)
@@ -154,6 +202,17 @@ def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device =
     return model, record
 
 def short_evaluation(model,test_loader,device):
+    """
+    quick evaluation of the model during training
+
+    Arguments
+    model (torch.nn.Module): the trained model
+    test_loader (torch.utils.Dataset): torch.utils.Dataset of the test set
+    device (str): the device whic the model is allocated
+
+    Returns:
+    acc (dict): the record of the evaluation, currently have 'accuracy', 'f1_weighted', and 'f1_macro'
+    """
     # copy the model to cpu
     if device:
         model = model.cpu()
@@ -173,6 +232,18 @@ def short_evaluation(model,test_loader,device):
 
 
 def evaluation(model,test_loader,label_encoder=None):
+    """
+    evaluation of the model during training
+
+    Arguments:
+    model (torch.nn.Module): the trained model
+    test_loader (torch.utils.Dataset): torch.utils.Dataset of the test set
+    label_encoder (sklearn.preprocessing.LabelEncoder): the label encoder used to encode the label of the test set
+
+    Returns:
+    cmtx (pd.DataFrame): multiclass confusion matrix
+    cls(sklearn.metrics.classification_report): classification report
+    """
     model = model.cpu()
     with torch.no_grad():
         for X_test, y_test in test_loader:
@@ -187,6 +258,16 @@ def evaluation(model,test_loader,label_encoder=None):
     return cmtx,cls
 
 def cmtx_table(cmtx,label_encoder=None):
+    """
+    rename label of the confusion matrix to its true label
+
+    Arguments
+    cmtx (pd.DataFrame): multiclass confusion matrix
+    label_encoder (sklearn.preprocessing.LabelEncoder): the label encoder used to encode the label of the test set
+
+    Returns:
+    cmtx (pd.DataFrame): multiclass confusion matrix
+    """
     if label_encoder != None:
         cmtx = pd.DataFrame(cmtx,
                             index=[f"actual: {i}"for i in label_encoder.classes_.tolist()],
@@ -198,6 +279,7 @@ def cmtx_table(cmtx,label_encoder=None):
 
 
 def make_directory(name, epoch=None, filepath='./'):
+    """standardized naming convention for the project"""
     time = strftime("%Y_%m_%d_%H_%M", gmtime())
     directory = filepath + name + '_checkpoint_' + str(epoch) + '__' + time
     return directory

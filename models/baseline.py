@@ -10,9 +10,9 @@ class LSTM(nn.Module):
         """
         2 layer LSTM model: feature_size --> 200 --> 3
 
-        attr:
-        seq_size: length of the sequence
-        feature_size: feature size of each interval in the sequence
+        Arguments:
+        seq_size (int): length of the sequence
+        feature_size (int): feature size of each interval in the sequence
         """
         super(LSTM, self).__init__()
         self.lstm1 = nn.LSTM(feature_size,200)
@@ -27,10 +27,13 @@ class LSTM(nn.Module):
 
 
 class Encoder(nn.Module):
-    """
-    Three layer Encoder for spectrogram (1,65,501), 3 layer
-    """
     def __init__(self,num_filters):
+        """
+        Three layers Convolutional Layers for spectrogram with size (1,65,501)
+
+        Arguments:
+        num_filters (list<int>): number of filters for each of the convolutional Layer length of list == 3
+        """
         super(Encoder, self).__init__()
         l1,l2,l3 = num_filters
         ### 1st ###
@@ -61,13 +64,14 @@ class Encoder(nn.Module):
 
 
 class Encoder_F(nn.Module):
-    """
-    Fourth layer Encoder for spectrogram (1,65,501), output = 1024,
 
-    Args:
-    num_filters(list)
-    """
     def __init__(self,num_filters):
+        """
+        Four layers Convolutional Layers for spectrogram with size (1,65,501)
+
+        Arguments:
+        num_filters (list<int>): number of filters for each of the convolutional Layer, length of list == 4
+        """
         super(Encoder_F, self).__init__()
         l1,l2,l3,l4 = num_filters
         ### 1st ###
@@ -101,13 +105,14 @@ class Encoder_F(nn.Module):
         return X
 
 class SimpleCNN(nn.Module):
-    """
-    Simple Conv2d NN
 
-    parameter:
-    setting (str): must be either {'1st','2nd'}
-    """
     def __init__(self,setting='1st'):
+        """
+        Simple Convolutional Neural Networks used in the previous work (Li et al. 2020)
+
+        parameter:
+        setting (str): must be either {'1st','2nd'}
+        """
         super(SimpleCNN, self).__init__()
         if setting == '1st':
             num_filter,kernel_size,latent = 32,5,238080

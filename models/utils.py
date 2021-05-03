@@ -5,6 +5,7 @@ from torch.nn import functional as F
 class Flatten(nn.Module):
 
     def __init__(self, start_dim=1):
+        """nn.Module implementation of torch.Flatten"""
         super().__init__()
         self.start_dim = start_dim
 
@@ -12,12 +13,20 @@ class Flatten(nn.Module):
         return torch.flatten(input,start_dim=self.start_dim)
 
 class Stack(nn.Module):
+
+    def __init__(self):
+        """Increase the number of channel from 1 to 3 by stacking extra 2 sample on the 1st axis"""
+        super().__init__()
+        pass
+
     def forward(self, x):
         return torch.cat((x,x,x),axis=1)
 
 class Lambda(nn.Module):
-    """
-    transform tensor according to function func
+    """transform tensor according to function func
+
+    Argument:
+    func (function): the mathematical operation applying in a tensor, accept only one input tensor 
     """
     def __init__(self, func):
         super().__init__()

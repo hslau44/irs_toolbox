@@ -159,7 +159,16 @@ def selections(*arg,**kwarg):
 
 
 def label_encode(label,enc=None):
-    """return label-encoded array and its LabelEncoder"""
+    """return label-encoded array and its LabelEncoder, or apply a predefined LabelEncoder on the label
+
+    Arguments:
+    label (np.ndarry): label, must be flatten
+    enc (sklearn.preprocessing.LabelEncoder): the optional predefined LabelEncoder
+
+    Return
+    label (np.ndarry): encoded label
+    enc (sklearn.preprocessing.LabelEncoder):  newly-create/predefined LabelEncoder
+    """
     if enc == None:
         enc = LabelEncoder()
         enc.fit(label)
