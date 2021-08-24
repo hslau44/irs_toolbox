@@ -12,8 +12,8 @@ from IPython.display import Image
 from skimage import io, transform
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import random
-%matplotlib inline
 
 
 def list_filepaths(directory,format_='.csv'):
