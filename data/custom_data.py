@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from data.utils import list_all_filepaths
+from data.utils import list_all_filepaths,DatasetObject
 
 def filepath_dataframe(directory):
 
@@ -35,3 +35,40 @@ def nucPaired_fpDataframe(dataframe):
     nuc2 = dataframe[dataframe['nuc'] == 'NUC2'][['key','fullpath']]
 
     return pd.merge(nuc1,nuc2,on='key')
+
+
+class PairDataset(DatasetObject):
+
+    def __init__(self,filepaths,filepaths2,label,transform=None):
+        """
+        Customized PyTorch Dataset, currently only support csv files
+
+        Attribute:
+        filepaths (numpy.ndarray): 1D array of filepaths on view1, file must be in csv format
+        filepaths2 (numpy.ndarray): 1D array of filepaths on view2, file must be in csv format
+        label (numpy.ndarray): 1D array of label
+        transfrom (torchvision.transforms): data transformation pipeline
+        data (object): all the files from dataframe, import with load_data
+
+        Method:
+        load_data: load all files into DatasetObject
+        """
+        super().__init__(filepaths=filepaths,
+                         label=label,
+                         transform=transform)
+
+        self.filepaths2 = filepaths2
+
+    def __len__(self):
+        return len(self.filepaths)
+
+    def __getitem__(self, idx):
+        fp1 = self.filepaths[idx]
+        X1 = pd.read_csv(fp1,header=None).to_numpy()
+        fp2 = self.filepaths[idx]
+        X2 = pd.read_csv(fp2,header=None).to_numpy()
+        if self.transform:
+            X1 = self.transform(X1)
+            X2 = self.transform(X2)
+        y = self.label[idx]
+        return X,y
