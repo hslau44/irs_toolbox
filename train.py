@@ -65,7 +65,7 @@ def reg_loss(model,device,factor=0.0005):
     return loss
 
 
-def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader = None, device = None, regularize = None, **kwargs):
+def train(model, train_loader, criterion, optimizer, end, start = 0, test_loader = None, device = None, regularize = None, **kwargs):
     """
     training Loop
 
@@ -76,7 +76,7 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
     optimizer (torch.optim): the optimizer to backpropagate the network
     end (int): the epoch which the loop end after
     start (int): the epoch which the loop start at
-    test_loader (torch.utils.Dataset): torch.utils.Dataset of the test set
+    test_loader (torch.utils.Dataset): torch.utils.Dataset of the validation set
     regularize (bool): add l2 regularization loss on top of the total loss
     device (str): the device whic the model is allocated
 
@@ -94,15 +94,19 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
     record = {'loss':[],'accuracy':[],'f1_weighted':[],'f1_macro':[]}
     i = start
     #Loop
-    while i <= end:
-        print(f"Epoch {i}: ", end='')
+    while i < end:
+
+        print(f"Epoch {i+1}: ", end='')
+
         for b, (X_train, y_train) in enumerate(train_loader):
 
             if device:
                 X_train = X_train.to(device)
 
             print(f">", end='')
+
             optimizer.zero_grad()
+
             y_pred = model(X_train)
 
             if device:
@@ -142,7 +146,7 @@ def train(model, train_loader, criterion, optimizer, end, start = 1, test_loader
     model = model.cpu()
     return model, record
 
-def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device = None):
+def pretrain_byPair(model, train_loader, criterion, optimizer, end, start = 0, device = None):
     """
     pretraining Loop
 
@@ -169,8 +173,8 @@ def pretrain(model, train_loader, criterion, optimizer, end, start = 1, device =
     record = {'loss':[]}
     i = start
     #Loop
-    while i <= end:
-        print(f"Epoch {i}: ", end='')
+    while i < end:
+        print(f"Epoch {i+1}: ", end='')
         for b, (items) in enumerate(train_loader):
 
             if device:
