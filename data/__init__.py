@@ -11,7 +11,7 @@ from torchvision.datasets.folder import ImageFolder
 from data.raw_csi import import_clean_data
 from data.spectrogram import import_data, import_pair_data, import_dummies
 from data.transformation import *
-from data.utils import DatasetObject
+# from data.utils import DatasetObject
 
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
