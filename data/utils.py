@@ -3,6 +3,7 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 import pandas as pd
+import torch
 from torch.utils.data import  Dataset
 
 
@@ -64,14 +65,14 @@ class DatasetObject(Dataset):
 
         Attribute:
         filepaths (numpy.ndarray): 1D array of filepaths, file must be in csv format
-        label (numpy.ndarray): 1D array of label
+        label (numpy.ndarray): 1D array of corresponding label
         transfrom (torchvision.transforms): data transformation pipeline
         data (object): all the files from dataframe, import with load_data
 
         Method:
         load_data: load all files into DatasetObject
         """
-        assert len(filepaths) == len(label)
+        # assert len(filepaths) == len(label)
         self.filepaths = filepaths
         self.transform = transform
         self.label = label
@@ -82,9 +83,10 @@ class DatasetObject(Dataset):
     def __getitem__(self, idx):
         fp = self.filepaths[idx]
         X = pd.read_csv(fp,header=None).to_numpy()
+        X = torch.Tensor(X)
         if self.transform:
             X = self.transform(X)
-        y = self.label[idx]
+        y = torch.Tensor([self.label[idx]]).long()
         return X,y
 
 
