@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 import torch
-from data.utils import list_all_filepaths,DatasetObject
+from data.torchData.utils import list_all_filepaths,DatasetObject
+
 
 def filepath_dataframe(directory):
 
@@ -47,12 +48,8 @@ class PairDataset(DatasetObject):
         Attribute:
         filepaths (numpy.ndarray): 1D array of filepaths on view1, file must be in csv format
         filepaths2 (numpy.ndarray): 1D array of filepaths on view2, file must be in csv format
-        label (numpy.ndarray): 1D array of label
         transfrom (torchvision.transforms): data transformation pipeline
-        data (object): all the files from dataframe, import with load_data
 
-        Method:
-        load_data: load all files into DatasetObject
         """
         super().__init__(filepaths=filepaths,
                          label=None,
