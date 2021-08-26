@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import torch
 from data.utils import list_all_filepaths,DatasetObject
 
 def filepath_dataframe(directory):
@@ -39,7 +40,7 @@ def nucPaired_fpDataframe(dataframe):
 
 class PairDataset(DatasetObject):
 
-    def __init__(self,filepaths,filepaths2,label,transform=None):
+    def __init__(self,filepaths,filepaths2,transform=None):
         """
         Customized PyTorch Dataset, currently only support csv files
 
@@ -54,7 +55,7 @@ class PairDataset(DatasetObject):
         load_data: load all files into DatasetObject
         """
         super().__init__(filepaths=filepaths,
-                         label=label,
+                         label=None,
                          transform=transform)
 
         self.filepaths2 = filepaths2
@@ -65,10 +66,11 @@ class PairDataset(DatasetObject):
     def __getitem__(self, idx):
         fp1 = self.filepaths[idx]
         X1 = pd.read_csv(fp1,header=None).to_numpy()
+        X1 = torch.Tensor(X1)
         fp2 = self.filepaths[idx]
         X2 = pd.read_csv(fp2,header=None).to_numpy()
+        X2 = torch.Tensor(X2)
         if self.transform:
             X1 = self.transform(X1)
             X2 = self.transform(X2)
-        y = self.label[idx]
-        return X,y
+        return X1,X2
