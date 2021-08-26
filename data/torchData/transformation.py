@@ -25,16 +25,11 @@ class ReduceRes(Transform):
 
 class CutFrame(Transform):
     """
-    **Custom** Reduce time resolution by factor of 4
+    **Custom** Cut half of the 1-channel Amptitude-PhaseShift to retain either Amptitude or PhaseShift
     """
     def __init__(self,keep='Amp'):
-        self.idx = 70
-        if keep = 'Amp':
-            self.idx = 70
-        elif keep = 'Phase'
-            self.idx = 0
-        else:
-            raise ValueError("Must be either 'Amp' or 'Phase'")
+        dic = {'Amp':70,'Phase':0}
+        self.idx = dic[keep]
 
     def __call__(self, X):
         return X[self.idx:self.idx+70,:]
