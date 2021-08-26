@@ -57,39 +57,6 @@ def filepath_dataframe(directory):
     return df
 
 
-class DatasetObject(Dataset):
-
-    def __init__(self,filepaths,label,transform=None):
-        """
-        Customized PyTorch Dataset, currently only support csv files
-
-        Attribute:
-        filepaths (numpy.ndarray): 1D array of filepaths, file must be in csv format
-        label (numpy.ndarray): 1D array of corresponding label
-        transfrom (torchvision.transforms): data transformation pipeline
-        data (object): all the files from dataframe, import with load_data
-
-        Method:
-        load_data: load all files into DatasetObject
-        """
-        # assert len(filepaths) == len(label)
-        self.filepaths = filepaths
-        self.transform = transform
-        self.label = label
-
-    def __len__(self):
-        return len(self.filepaths)
-
-    def __getitem__(self, idx):
-        fp = self.filepaths[idx]
-        X = pd.read_csv(fp,header=None).to_numpy()
-        X = torch.Tensor(X)
-        if self.transform:
-            X = self.transform(X)
-        y = torch.Tensor([self.label[idx]]).long()
-        return X,y
-
-
 
 # class DatasetObject:
 #     """
