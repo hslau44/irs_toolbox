@@ -23,6 +23,22 @@ class ReduceRes(Transform):
     def __call__(self, X):
         return X[:,::4]
 
+class CutFrame(Transform):
+    """
+    **Custom** Reduce time resolution by factor of 4
+    """
+    def __init__(self,keep='Amp'):
+        self.idx = 70
+        if keep = 'Amp':
+            self.idx = 70
+        elif keep = 'Phase'
+            self.idx = 0
+        else:
+            raise ValueError("Must be either 'Amp' or 'Phase'")
+
+    def __call__(self, X):
+        return X[self.idx:self.idx+70,:]
+
 # Lv2
 class Unsqueeze(Transform):
     """
