@@ -3,6 +3,8 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
 import torch
 from torch.utils.data import  Dataset
 
@@ -56,6 +58,23 @@ def filepath_dataframe(directory):
 
     return df
 
+
+def visual_spectrogram(img,title='spectrogram',figsize=(15,50)):
+    """
+    visual spectrogram
+    """
+    if len(img.shape) == 3:
+
+        img.squeeze()
+
+    img = MinMaxScaler(feature_range=(0,1)).fit_transform(img)
+
+    plt.figure(figsize = figsize)
+    plt.imshow(img,cmap='jet')
+    plt.title(title)
+    plt.show()
+
+    return
 
 
 # class DatasetObject:
