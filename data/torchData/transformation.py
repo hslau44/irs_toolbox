@@ -25,7 +25,7 @@ def random_split(df,train_size=0.8,stratify_column='activity'):
     train,test = train_test_split(df,train_size=train_size,stratify=df[stratify_column])
     return train,test
 
-def leaveOnePersonOut_split(df,column='person',testsub='Three',valsub=None):
+def leaveOneOut_split(df,column='person',testsub='Three',valsub=None):
     assert column in df.columns, 'column is not in df'
     assert testsub in df[column].unique(), f'testsub is not in df.{column}'
     test = df[(df[column] == testsub)]
@@ -40,10 +40,10 @@ def leaveOnePersonOut_split(df,column='person',testsub='Three',valsub=None):
 
 class Transform(object):
     """
-    CustomTransform
+    Custom Transform
 
-    Level 1: ReduceRes()
-    Level 2: CustomUnsqueezeChannel(),AddChannel(),StackChannel()
+    Level 1: ReduceRes(),CutFrame()
+    Level 2: Unsqueeze(),UnsqueezebyRearrange(),StackChannel()
     Level 3: ToStackImg()
     """
 
