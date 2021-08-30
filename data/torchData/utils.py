@@ -85,5 +85,5 @@ class DatasetObject(Dataset):
         X = torch.Tensor(X)
         if self.transform:
             X = self.transform(X)
-        y = torch.Tensor([self.label[idx]]).long()
+        y = np.int64(self.label[idx])
         return X,y
