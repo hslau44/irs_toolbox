@@ -3,6 +3,7 @@ import torchvision.transforms as T
 from torch.utils.data import DataLoader
 from data.torchData.custom_data import filepath_dataframe
 from data.torchData.utils import DatasetObject
+from data.torchData.data_selection import *
 from data.torchData.transformation import *
 
 def dataSelection_Set1(df):
