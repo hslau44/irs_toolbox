@@ -1,8 +1,6 @@
 import torch
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from data.transformation import resampling_
 
 class Transform(object):
     """
@@ -17,7 +15,7 @@ class Transform(object):
         pass
 
     def __call__(self, X):
-        return torch.Tensor(X)
+        return X
 
 # Lv1
 class ReduceRes(Transform):
@@ -52,7 +50,7 @@ class Unsqueeze(Transform):
         self.dim = dim
 
     def __call__(self, X):
-        return X.unsqueeze(self.dim)
+        return np.expand_dims(X,axis=self.dim)
 
 class StackChannel(Transform):
     """
@@ -70,7 +68,7 @@ class StackChannel(Transform):
 
     def __call__(self, X):
         assert len(X.shape) == 3 and X.shape[0] == 1, f'torchsize must be (1,w,l), current size: {X.shape}'
-        return torch.cat([X for _ in range(self.stack)],dim=self.dim)
+        return np.concatenate([X for _ in range(self.stack)],axis=self.dim)
 
 class UnsqueezebyRearrange(Transform):
     """
@@ -103,4 +101,5 @@ class ToStackImg(Transform):
     def __call__(self, X):
         c,r,w = X.shape
         assert w%self.n_seq == 0, 'length must be able to be divided by n_seq'
-        return X.reshape(c,r,self.n_seq,w//self.n_seq).permute(2,0,1,3)
+        X = X.reshape(c,r,self.n_seq,w//self.n_seq)
+        return np.transpose(X,(2,0,1,3))
