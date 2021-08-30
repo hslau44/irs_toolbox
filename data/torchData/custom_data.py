@@ -63,10 +63,8 @@ class PairDataset(DatasetObject):
     def __getitem__(self, idx):
         fp1 = self.filepaths[idx]
         X1 = pd.read_csv(fp1,header=None).to_numpy()
-        X1 = torch.Tensor(X1)
         fp2 = self.filepaths[idx]
         X2 = pd.read_csv(fp2,header=None).to_numpy()
-        X2 = torch.Tensor(X2)
         if self.transform:
             X1 = self.transform(X1)
             X2 = self.transform(X2)
