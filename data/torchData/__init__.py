@@ -99,19 +99,21 @@ def dataSelection_Set4(spc=5):
     return DataSelection(split='loov',test_sub='One',val_sub='Four',nuc='NUC1',room=1,sample_per_class=spc)
 
 
-def dataSelection_Set5(df):
+def dataSelection_Set5():
     """To test the model under unseen environemnt"""
-    lb = LabelEncoder()
-    df['activity'] = lb.fit_transform(df['activity'])
-    df = df[df['nuc'] == 'NUC1']
-    train = df[df['room'] == 1]
-    test  = df[df['room'] == 2]
+    def func(df):
+        lb = LabelEncoder()
+        df['activity'] = lb.fit_transform(df['activity'])
+        df = df[df['nuc'] == 'NUC1']
+        train = df[df['room'] == 1]
+        test  = df[df['room'] == 2]
 
-    train,val, _ = leaveOneOut_split(train,testsub='One',valsub='Four')
-    _ , _ , test = leaveOneOut_split(test,testsub='One',valsub='Four')
+        train,val, _ = leaveOneOut_split(train,testsub='One',valsub='Four')
+        _ , _ , test = leaveOneOut_split(test,testsub='One',valsub='Four')
 
-    test = resampling(test,'activity',oversampling=False)
-    return train,val,test
+        test = resampling(test,'activity',oversampling=False)
+        return train,val,test
+    return func
 
 
 
