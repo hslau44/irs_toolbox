@@ -23,13 +23,14 @@ def list_all_filepaths(directory):
             filepaths.append(os.path.join(r, item))
     return filepaths
 
-def filepath_dataframe(directory):
+def filepath_dataframe(directory,split='\\'):
     """
     pandas.Dataframe that contains all filepaths in the directory with targeted format,
     the folders in the directory are identified as class based on its levels
 
     Arguments:
     directory (str): the directory of the files
+    split (str)
 
     Return:
     dataframe (pd.DataFrame): a dataframe with filespath as the first columns, number of columns is
@@ -49,12 +50,12 @@ def filepath_dataframe(directory):
 
     df = pd.DataFrame(data=filepaths,columns=['fullpath'])
 
-    start = len(directory.split('\\'))
+    start = len(directory.split(split))
 
-    end = df['fullpath'].apply(lambda x: len(x.split('\\'))).max()-1
+    end = df['fullpath'].apply(lambda x: len(x.split(split))).max()-1
 
     for i in range(start,end):
-        df[f'class_{i-start+1}'] = df['fullpath'].apply(lambda x: x.split('\\')[i])
+        df[f'class_{i-start+1}'] = df['fullpath'].apply(lambda x: x.split(split)[i])
 
     return df
 

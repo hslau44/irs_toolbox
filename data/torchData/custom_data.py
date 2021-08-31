@@ -4,13 +4,13 @@ import torch
 from data.torchData.utils import list_all_filepaths,DatasetObject
 
 
-def filepath_dataframe(directory):
+def filepath_dataframe(directory,split='\\'):
 
     filepaths = list_all_filepaths(directory)
 
     df = pd.DataFrame(data=filepaths,columns=['fullpath'])
 
-    df['filename'] = df['fullpath'].apply(lambda x: x.split('\\')[-1])
+    df['filename'] = df['fullpath'].apply(lambda x: x.split(split)[-1])
 
     df['exp'] = df['filename'].apply(lambda x: int(x.split('_')[1]))
 
