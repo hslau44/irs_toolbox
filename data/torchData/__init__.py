@@ -118,12 +118,13 @@ def dataSelection_Set5():
 
 class DataLoading(object):
 
-    def __init__(self,transform,batch_size=64,test_size='batch',shuffle=False,num_workers=0):
+    def __init__(self,transform,load_data=False,batch_size=64,test_size='batch',shuffle=False,num_workers=0):
         self.transform = transform
         self.batch_size = batch_size
         self.test_size = test_size
         self.shuffle = shuffle
         self.num_workers = num_workers
+        self.load_data = load_data
 
     def __call__(self,train,val=None,test=None):
 
@@ -132,18 +133,26 @@ class DataLoading(object):
         train_obj = DatasetObject(filepaths=train['fullpath'].to_numpy(),
                                   label=train['activity'].to_numpy(),
                                   transform=self.transform)
+
+        if self.load_data: train_obj = train_obj.load_data()
+
         train_loader = DataLoader(train_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
 
         if isinstance(val,pd.DataFrame):
             val_obj = DatasetObject(filepaths=val['fullpath'].to_numpy(),
                                       label=val['activity'].to_numpy(),
                                       transform=self.transform)
+
+            if self.load_data: val_obj = val_obj.load_data()
+
             val_loader = DataLoader(val_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
 
         if isinstance(test,pd.DataFrame):
             test_obj = DatasetObject(filepaths=test['fullpath'].to_numpy(),
                                       label=test['activity'].to_numpy(),
                                       transform=self.transform)
+
+            if self.load_data: test_obj = test_obj.load_data()
 
             if self.test_size == 'full':
                 test_loader = DataLoader(test_obj, batch_size=test.shape[0], shuffle=False, num_workers=self.num_workers)

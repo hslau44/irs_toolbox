@@ -88,3 +88,16 @@ class DatasetObject(Dataset):
             X = self.transform(X)
         y = np.int64(self.label[idx])
         return X,y
+
+    def load_data(self):
+        X,Y = [],[]
+        for idx in range(self.__len__()):
+            x,y = self.__getitem__(idx)
+            X.append(x)
+            Y.append(y)
+            if idx%(self.__len__()/20) == 0: print('>',end='')
+        X = torch.Tensor(X)
+        Y = torch.Tensor(Y).long()
+        tensordataset = torch.utils.data.TensorDataset(X,Y)
+        print('')
+        return tensordataset
