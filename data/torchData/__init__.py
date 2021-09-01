@@ -117,6 +117,46 @@ def dataSelection_Set5():
 
 
 
+class DataLoading(object):
+
+    def __init__(transform,batch_size=64,test_size='batch',shuffle=False,num_workers=0):
+        self.transform = transform
+        self.batch_size = batch_size
+        self.test_size = test_size
+        self.shuffle = shuffle
+        self.num_workers = num_workers
+
+    def __call__(train,val=None,test=None):
+
+        train_obj = DatasetObject(filepaths=train['fullpath'].to_numpy(),
+                                  label=train['activity'].to_numpy(),
+                                  transform=self.transform)
+        train_loader = DataLoader(train_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
+
+        if test:
+            test_obj = DatasetObject(filepaths=test['fullpath'].to_numpy(),
+                                      label=test['activity'].to_numpy(),
+                                      transform=self.transform)
+
+            if self.test_size == 'batch'
+                test_loader = DataLoader(test_obj, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+            else:
+                test_loader = DataLoader(test_obj, batch_size=test.shape[0], shuffle=False, num_workers=self.num_workers)
+
+            if val:
+                val_obj = DatasetObject(filepaths=val['fullpath'].to_numpy(),
+                                          label=val['activity'].to_numpy(),
+                                          transform=self.transform)
+                val_loader = DataLoader(val_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
+
+                return train_loader,val_loader,test_loader
+
+            else:
+                return train_loader,test_loader
+
+        else:
+            return train_loader
+
 
 
 
