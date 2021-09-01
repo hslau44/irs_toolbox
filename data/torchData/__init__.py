@@ -1,3 +1,4 @@
+import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 import torchvision.transforms as T
 from torch.utils.data import DataLoader
@@ -133,13 +134,13 @@ class DataLoading(object):
                                   transform=self.transform)
         train_loader = DataLoader(train_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
 
-        if val:
+        if isinstance(val,pd.DataFrame):
             val_obj = DatasetObject(filepaths=val['fullpath'].to_numpy(),
                                       label=val['activity'].to_numpy(),
                                       transform=self.transform)
             val_loader = DataLoader(val_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
 
-        if test:
+        if isinstance(test,pd.DataFrame):
             test_obj = DatasetObject(filepaths=test['fullpath'].to_numpy(),
                                       label=test['activity'].to_numpy(),
                                       transform=self.transform)
