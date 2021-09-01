@@ -7,3 +7,4 @@ Poutyne
 torchvision
 torch
 torchsummary
+tensorboard
