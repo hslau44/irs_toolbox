@@ -126,10 +126,18 @@ class DataLoading(object):
 
     def __call__(train,val=None,test=None):
 
+        train_loader,val_loader,test_loader = None, None, None
+
         train_obj = DatasetObject(filepaths=train['fullpath'].to_numpy(),
                                   label=train['activity'].to_numpy(),
                                   transform=self.transform)
         train_loader = DataLoader(train_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
+
+        if val:
+            val_obj = DatasetObject(filepaths=val['fullpath'].to_numpy(),
+                                      label=val['activity'].to_numpy(),
+                                      transform=self.transform)
+            val_loader = DataLoader(val_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
 
         if test:
             test_obj = DatasetObject(filepaths=test['fullpath'].to_numpy(),
@@ -141,19 +149,7 @@ class DataLoading(object):
             else:
                 test_loader = DataLoader(test_obj, batch_size=test.shape[0], shuffle=False, num_workers=self.num_workers)
 
-            if val:
-                val_obj = DatasetObject(filepaths=val['fullpath'].to_numpy(),
-                                          label=val['activity'].to_numpy(),
-                                          transform=self.transform)
-                val_loader = DataLoader(val_obj, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
-
-                return train_loader,val_loader,test_loader
-
-            else:
-                return train_loader,test_loader
-
-        else:
-            return train_loader
+        return train_loader,val_loader,test_loader
 
 
 
