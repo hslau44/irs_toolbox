@@ -152,12 +152,12 @@ class DataLoading(object):
         return train_loader,val_loader,test_loader
 
 
-def dataLoading_CnnLstmS(df):
+def dataLoading_CnnLstmS():
     """dataLoading_cnnLstmS"""
     transform = T.Compose([ReduceRes(),Unsqueeze(),ToStackImg(25)])
     return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
 
-def dataLoading_CnnS(df):
+def dataLoading_CnnS():
     """dataLoading_CnnS"""
     transform = T.Compose([ReduceRes(),Unsqueeze()])
     return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
