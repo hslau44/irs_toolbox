@@ -45,6 +45,8 @@ class DataSelection(object):
 
     def __call__(self,df):
 
+        train,val,test = None,None,None
+
         df['activity'] = self.encoder.fit_transform(df['activity'])
 
         if isinstance(self.nuc,list):
@@ -58,8 +60,6 @@ class DataSelection(object):
             df = df[df['room'] == self.room]
 
         self.num_class = df['activity'].nunique()
-
-        train,val,test = None,None,None
 
         if self.split == 'random':
             train,test = random_split(df,train_size=self.train_sub)
@@ -76,10 +76,8 @@ class DataSelection(object):
             train,_ = random_split(train,train_size=self.num_class*self.spc)
         test = resampling(test,'activity',oversampling=False)
 
-        if self.val_sub:
-            return train,val,test
-        else:
-            return train,test
+
+        return train,val,test
 
 
 def dataSelection_Set1():
