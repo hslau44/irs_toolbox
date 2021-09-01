@@ -144,30 +144,20 @@ class DataLoading(object):
                                       label=test['activity'].to_numpy(),
                                       transform=self.transform)
 
-            if self.test_size == 'batch'
-                test_loader = DataLoader(test_obj, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
-            else:
+            if self.test_size == 'full':
                 test_loader = DataLoader(test_obj, batch_size=test.shape[0], shuffle=False, num_workers=self.num_workers)
+            else:
+                test_loader = DataLoader(test_obj, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
 
         return train_loader,val_loader,test_loader
 
 
-
-
-def dataLoader_CnnLstmS(df):
-    """dataLoader_cnnLstmS"""
+def dataLoading_CnnLstmS(df):
+    """dataLoading_cnnLstmS"""
     transform = T.Compose([ReduceRes(),Unsqueeze(),ToStackImg(25)])
-    datasetobj = DatasetObject(filepaths=df['fullpath'].to_numpy(),
-                               label=df['activity'].to_numpy(),
-                               transform=transform)
-    dataloader = DataLoader(datasetobj, batch_size=64, shuffle=False, num_workers=0, pin_memory=True)
-    return dataloader
+    return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
 
-def dataLoader_CnnS(df):
-    """dataLoader_CnnS"""
+def dataLoading_CnnS(df):
+    """dataLoading_CnnS"""
     transform = T.Compose([ReduceRes(),Unsqueeze()])
-    datasetobj = DatasetObject(filepaths=df['fullpath'].to_numpy(),
-                               label=df['activity'].to_numpy(),
-                               transform=transform)
-    dataloader = DataLoader(datasetobj, batch_size=64, shuffle=False, num_workers=0, pin_memory=True)
-    return dataloader
+    return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
