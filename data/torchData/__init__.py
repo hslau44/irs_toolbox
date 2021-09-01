@@ -117,14 +117,14 @@ def dataSelection_Set5():
 
 class DataLoading(object):
 
-    def __init__(transform,batch_size=64,test_size='batch',shuffle=False,num_workers=0):
+    def __init__(self,transform,batch_size=64,test_size='batch',shuffle=False,num_workers=0):
         self.transform = transform
         self.batch_size = batch_size
         self.test_size = test_size
         self.shuffle = shuffle
         self.num_workers = num_workers
 
-    def __call__(train,val=None,test=None):
+    def __call__(self,train,val=None,test=None):
 
         train_loader,val_loader,test_loader = None, None, None
 
