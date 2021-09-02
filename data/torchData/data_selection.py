@@ -4,25 +4,6 @@ from sklearn.model_selection import train_test_split
 from data.transformation import resampling_
 
 
-def room_split(df,trainroom=1,testroom=2):
-    """
-    split dataset by room
-
-    Arguments:
-    df (pd.DataFrame) - dataset
-    trainroom(int) - room number of the train set
-    testroom(int) - room number of the test set
-
-    Returns:
-    train (pd.DataFrame) train set
-    test (pd.DataFrame) test set
-
-    """
-    train = df[(df['room'] == trainroom)]
-    test = df[(df['room'] == testroom)]
-    return train,test
-
-
 def resampling(df,columns,oversampling=False):
     """
     Resample the dataset
