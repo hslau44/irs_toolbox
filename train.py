@@ -1,50 +1,70 @@
+
 import os
 import sys
 from time import gmtime, strftime
 import numpy as np
 import pandas as pd
+
 import sklearn
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, f1_score
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from torch import Tensor, nn
-from torch.nn import functional as F
+from poutyne import Model,Experiment
 
-from data import prepare_single_source
-
+from data import torchData
+from data.torchData.custom_data import filepath_dataframe
+from models.temporal import CNN_LSTM
 
 
 #####################################################################################################################
 
 # random seed
-np.random.seed(1024)
-torch.manual_seed(1024)
+seed = 42
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
 
 # gpu setting
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = DEVICE
 torch.cuda.set_device(DEVICE)
+device = DEVICE
 
-### data setting
-# DIRC = 'E:/external_data/Experiment4/Spectrogram_data_csv_files/CSI_data_pair'
-DIRC = './data/experiment_data/exp_2/spectrogram'
-AXIS=1
-TRAIN_SIZE=0.8
-SAMPLING='weight'
+## I/O directory
+data_dir = 'E:\external_data\opera_csi\Session_2\experiment_data\experiment_data\exp_7_amp_spec_only\spectrogram_multi'
+charsplit = '\\'
+record_outpath = './record'
 
-### train setting
-BATCH_SIZE=64
-NUM_WORKERS = 0
-REGULARIZE = None
-NUM_EPOCHS = 200
-MAIN_NAME = 'Trainmode-normal_Network-shallowv2_Data-exp4csi' #'Trainmode_simclr_Network_shallowv2_Data_exp4nuc1'
-OUT_PATH = None # '.'
-output = OUT_PATH
+# data selection
+dataselection_name = 'EXP7-NUC1-Room1-Amp-RandomSplit'
+data_selection = torchData.DataSelection(split='random',
+                                         test_sub=0.1,
+                                         val_sub=0.1,
+                                         nuc='NUC1',
+                                         room=1,
+                                         sample_per_class=11)
 
+# data loading
+data_loading = torchData.DataLoading(transform=torchData.CnnLstmS(),
+                                     load_data=False,
+                                     num_workers=1)
+
+# training
+network_name = 'CNNLSTM'
+model_builder = CNN_LSTM
+optimizer_builder = torch.optim.SGD
+lr = 0.0005
+epochs = 1
+
+# Experiment Name
+comment = 'TestMain'
+exp_name = f'{network_name}_Supervised_{dataselection_name}_Comment-{comment}'
 
 #####################################################################################################################
 
+def class_weight(df,col):
+    return torch.FloatTensor([1-w for w in df[col].value_counts(normalize=True).sort_index().tolist()])
 
 def reg_loss(model,device,factor=0.0005):
     """
@@ -63,7 +83,6 @@ def reg_loss(model,device,factor=0.0005):
         l2_reg += torch.norm(param)
     loss = factor * l2_reg
     return loss
-
 
 def train(model, train_loader, criterion, optimizer, end, start = 0, test_loader = None, device = None, regularize = None, **kwargs):
     """
@@ -132,7 +151,7 @@ def train(model, train_loader, criterion, optimizer, end, start = 0, test_loader
         loss = loss.tolist()
         record['loss'].append(loss)
         print(f' loss: {loss} ',end='')
-        if (test_loader != None) and i%10 ==0 :
+        if (test_loader != None) and (i%10 == 0) and (i>0):
             acc = short_evaluation(model,test_loader,device)
             record['accuracy'].append(acc['accuracy'])
             record['f1_weighted'].append(acc['f1_weighted'])
@@ -233,8 +252,6 @@ def short_evaluation(model,test_loader,device):
         model = model.to(device)
     return acc
 
-
-
 def evaluation(model,test_loader,label_encoder=None):
     """
     evaluation of the model during training
@@ -280,15 +297,11 @@ def cmtx_table(cmtx,label_encoder=None):
         cmtx = pd.DataFrame(cmtx)
     return cmtx
 
-
-
 def make_directory(name, epoch=None, filepath='./'):
     """standardized naming convention for the project"""
     time = strftime("%Y_%m_%d_%H_%M", gmtime())
     directory = filepath + name + '_checkpoint_' + str(epoch) + '__' + time
     return directory
-
-
 
 def save_checkpoint(model,optimizer,epoch,directory):
     torch.save({'epoch': epoch,
@@ -304,25 +317,10 @@ def load_checkpoint(model,optimizer,filepath):
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     return model,optimizer
 
-
-
-
 # -----------------------------------------helper---------------------------------------
 
-# def record_log(main_name,epochs,record='None',cmtx='None',cls='None',filepath='./record/'):
-#     path = make_directory(main_name,epoch=epochs,filepath=filepath)
-#     if type(record) != str:
-#         pd.DataFrame(record['train'],columns=['train_loss']).to_csv(path+'_loss.csv')
-#     if type(cmtx) != str:
-#         if  type(record) != str:
-#             pd.DataFrame(record['validation'],columns=['validation_accuracy']).to_csv(path+'_accuracy.csv')
-#         cmtx.to_csv(path+'_cmtx.csv')
-#     if type(cls) != str:
-#         cls.to_csv(path+'_report.csv')
-#     return
-
 def record_log(record_outpath,exp_name,phase,record='None',cmtx='None',cls='None',loss_rec=True,acc_rec=False):
-    prefix = record_outpath+'/'+exp_name+'_Phase_'+phase
+    prefix = os.path.join(record_outpath,exp_name+'_Phase-'+phase)
     if type(record) != str:
         if loss_rec:
             pd.DataFrame(record['loss'],columns=['loss']).to_csv(prefix+'_loss.csv')
@@ -339,12 +337,44 @@ def record_log(record_outpath,exp_name,phase,record='None',cmtx='None',cls='None
         cls.to_csv(prefix+'_report.csv')
     return
 
-
 def save_model(model_outpath,exp_name,phase,model):
     model_fp = model_outpath+'/'+exp_name+'_Phase_'+phase
     torch.save(model.state_dict(), model_fp)
     return model_fp
 
-
-
 # -----------------------------------Main-------------------------------------------
+
+if __name__ == '__main__':
+    print('Experiment Name: ',exp_name)
+    print('Cuda Availability: ',torch.cuda.is_available())
+    # data preparation
+    df = filepath_dataframe(data_dir,charsplit)
+    df_train,df_val,df_test = data_selection(df)
+    train_loader,val_loader,test_loader = data_loading(df_train,df_val,df_test)
+
+    # auto_setting
+    n_classes = df['activity'].nunique()
+    weight = class_weight(df_train,'activity').to(device)
+
+    # initial evaluation
+    phase = 'lab-initial'
+    model = model_builder(n_classes=n_classes)
+    criterion = nn.CrossEntropyLoss(weight=weight).to(device)
+    optimizer = optimizer_builder(list(model.parameters()), lr=lr)
+    cmtx,cls = evaluation(model,test_loader)
+    record_log(record_outpath,exp_name,phase,cmtx=cmtx,cls=cls)
+
+    # training
+    phase = 'lab-finetune'
+    model, record = train(model=model,
+                          train_loader=train_loader,
+                          criterion=criterion,
+                          optimizer=optimizer,
+                          end=epochs,
+                          test_loader=test_loader,
+                          device=device,
+                          regularize=False)
+
+    cmtx,cls = evaluation(model,test_loader)
+    acc_rec = True if epochs >= 10 else False
+    record_log(record_outpath,exp_name,phase,record=record,cmtx=cmtx,cls=cls,acc_rec=acc_rec)
