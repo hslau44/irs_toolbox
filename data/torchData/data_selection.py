@@ -64,19 +64,17 @@ def random_split(df,train_size=0.8,stratify_column='activity'):
     train,test = train_test_split(df,train_size=train_size,stratify=df[stratify_column])
     return train,test
 
-def leaveOneOut_split(df,column='person',testsub='Three',valsub=None):
+def leaveOneOut_split(df,column,testsub):
     """
-    Split the dataset into train-validation-test set by leave-One-Out
+    Split the dataset into train-test set by leave-One-Out
 
     Arguments:
     df (pd.DataFrame) - dataset
     column (str) - subject for train set
     testsub (str) - subject of test set
-    valsub (str) - subject of validation set, if None, validation set not to be returned
 
     Returns:
     train (pd.DataFrame) train set
-    val (pd.DataFrame) validation set
     test (pd.DataFrame) test set
 
     """
@@ -84,9 +82,4 @@ def leaveOneOut_split(df,column='person',testsub='Three',valsub=None):
     assert testsub in df[column].unique(), f'testsub is not in df.{column}'
     test = df[(df[column] == testsub)]
     train = df[~(df[column] == testsub)]
-    if valsub:
-        val = train[(train[column] == valsub)]
-        train = train[~(train[column] == valsub)]
-        return train,val,test
-    else:
-        return train,test
+    return train,test

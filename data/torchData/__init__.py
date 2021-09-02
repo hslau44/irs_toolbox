@@ -109,14 +109,21 @@ class DataSelection(object):
         self.num_class = df['activity'].nunique()
 
         if self.split == 'random':
+
             train,test = random_split(df,train_size=self.train_sub)
+
             if self.val_sub:
                 train,val = random_split(train,train_size=self.val_sub)
+
         elif self.split == 'loov':
+
+            train,test = leaveOneOut_split(df,column='activity',testsub=self.test_sub)
+
             if self.val_sub:
-                train,val,test = leaveOneOut_split(df,testsub=self.test_sub,valsub=self.val_sub)
-            else:
-                train,test = leaveOneOut_split(df,testsub=self.test_sub,valsub=None)
+                train,val = leaveOneOut_split(train,column='activity',testsub=self.val_sub)
+
+        else:
+            raise ValueError("split must be either 'loov' or 'random'")
 
         if isinstance(self.spc,int):
             train = resampling(train,'activity',oversampling=False)
