@@ -25,9 +25,9 @@ def filepath_dataframe(directory,split='\\'):
 
     the dataframe would be shown as below:
 
-    fullpath                         | exp | person | room | activity     | index | nuc    | key
-    ---------------------------------+-----+--------+------+----------- --+-------+--------+-----------------------------------------------
-    directory/cat/black/blackcat.jpg | 1   | black  | 1    | 'bodyrotate' | 1     | 'NUC1' | exp_005_person_One_room_1_bodyrotate_index_1
+    fullpath                                                        | exp | person | room | activity     | index | nuc    | key
+    ----------------------------------------------------------------+-----+--------+------+----------- --+-------+--------+-----------------------------------------------
+    directory/exp_005_person_One_room_1_bodyrotate_index_1_NUC1.csv | 1   | black  | 1    | 'bodyrotate' | 1     | 'NUC1' | exp_005_person_One_room_1_bodyrotate_index_1
     """
 
     filepaths = list_all_filepaths(directory)
