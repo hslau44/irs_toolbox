@@ -26,7 +26,7 @@ def resampling(df,columns,oversampling=False):
         df = df.iloc[idx,:]
     return df
 
-def random_split(df,train_size=0.8,stratify_column='activity'):
+def random_split(df,stratify_column,train_size=0.8):
     """
     Random split the dataset into train-test set
     Using sklearn.model_selection.train_test_split
@@ -42,6 +42,7 @@ def random_split(df,train_size=0.8,stratify_column='activity'):
     train (pd.DataFrame) train set
     test (pd.DataFrame) test set
     """
+    assert stratify_column in df.columns, 'stratify column is not in df'
     train,test = train_test_split(df,train_size=train_size,stratify=df[stratify_column])
     return train,test
 

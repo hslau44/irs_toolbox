@@ -110,10 +110,10 @@ class DataSelection(object):
 
         if self.split == 'random':
 
-            train,test = random_split(df,train_size=self.train_sub)
+            train,test = random_split(df,train_size=self.train_sub,stratify_column='activity')
 
             if self.val_sub:
-                train,val = random_split(train,train_size=self.val_sub)
+                train,val = random_split(train,train_size=self.val_sub,stratify_column='activity')
 
         elif self.split == 'loov':
 
@@ -127,7 +127,7 @@ class DataSelection(object):
 
         if isinstance(self.spc,int):
             train = resampling(train,'activity',oversampling=False)
-            train,_ = random_split(train,train_size=self.num_class*self.spc)
+            train,_ = random_split(train,train_size=self.num_class*self.spc,stratify_column='activity')
         test = resampling(test,'activity',oversampling=False)
 
         return train,val,test
