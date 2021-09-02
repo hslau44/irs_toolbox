@@ -300,7 +300,7 @@ def dataLoading_CnnS():
     transform = CnnS()
     return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
 
-def CnnLstmS():
+def Transform_CnnLstmS():
     """
     Torch Transformation (torchvision.transforms.transforms.Compose)
     for resolution-reduced CNN-LSTM
@@ -323,7 +323,7 @@ def CnnLstmS():
     """
     return T.Compose([ReduceRes(),Unsqueeze(),ToStackImg(25)])
 
-def CnnS():
+def Transform_CnnS():
     """
     Torch Transformation (torchvision.transforms.transforms.Compose)
     for resolution-reduced CNN
@@ -345,3 +345,10 @@ def CnnS():
     train_loader,val_loader,test_loader = dataloading(train,val,test)
     """
     return T.Compose([ReduceRes(),Unsqueeze()])
+
+def Transform_ResNet():
+    """
+    Torch Transformation (torchvision.transforms.transforms.Compose)
+    for resolution-reduced ResNet (3 channels)
+    """
+    return T.Compose([ReduceRes(),CutFrame(),Unsqueeze(),StackChannel()])
