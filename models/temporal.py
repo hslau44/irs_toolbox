@@ -5,7 +5,7 @@ from torchsummary import summary
 from models.utils import Lambda
 
 class SmallEncoder(nn.Module):
-    def __init__(self,l1,l2,l3):
+    def __init__(self,l0,l1,l2,l3):
         """
         3-layer CNN Encoder for CNN-LSTM model
 
@@ -16,7 +16,7 @@ class SmallEncoder(nn.Module):
         """
         super(SmallEncoder, self).__init__()
         ### 1st ###
-        self.conv1 = nn.Conv2d(1,l1,kernel_size=4,stride=2)
+        self.conv1 = nn.Conv2d(l0,l1,kernel_size=4,stride=2)
         self.norm1 = nn.BatchNorm2d(l1) # nn.BatchNorm2d()
         self.actv1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
@@ -65,15 +65,16 @@ class LSTM(nn.Module):
 
 class CNN_LSTM(nn.Module):
 
-    def __init__(self,n_seq=25,n_feature=128,n_classes=10):
+    def __init__(self,n_seq=25,n_channel=1,n_feature=128,n_classes=10):
         super(CNN_LSTM, self).__init__()
 
         self.n_seq = n_seq
         self.n_feature = n_feature
         self.n_classes = n_classes
         self.den_input = self.n_seq*self.n_feature*2 # 2 for bidirectional
+        self.n_channel = n_channel
 
-        self.cnn = SmallEncoder(32,64,self.n_feature)
+        self.cnn = SmallEncoder(self.n_channel,32,64,self.n_feature)
         self.lstm = LSTM(self.n_seq,self.n_feature)
         self.dcn = nn.Sequential(nn.Linear(self.den_input,64),
                                  nn.ReLU(),

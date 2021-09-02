@@ -35,9 +35,10 @@ class Encoder(nn.Module):
         num_filters (list<int>): number of filters for each of the convolutional Layer length of list == 3
         """
         super(Encoder, self).__init__()
-        l1,l2,l3 = num_filters
+        assert len(num_filters) == 4
+        l0,l1,l2,l3 = num_filters
         ### 1st ###
-        self.conv1 = nn.Conv2d(1,l1,kernel_size=5,stride=1)
+        self.conv1 = nn.Conv2d(l0,l1,kernel_size=5,stride=1)
         self.norm1 = nn.BatchNorm2d(l1) # nn.BatchNorm2d()
         self.actv1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=(2,2))

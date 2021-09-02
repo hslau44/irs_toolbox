@@ -30,7 +30,7 @@ class Attention(nn.Module):
         a = F.softmax(a,dim=1)
         return a*X
 
-def create_baseline_encoder(num_filters=[32,64,96],scale_factor=1):
+def create_baseline_encoder(num_filters=[1,32,64,96],scale_factor=1):
     """
     VGG 16 for 1 channel image, output: 512*output_size
     """
