@@ -126,28 +126,28 @@ class DataSelection(object):
         return train,val,test
 
 
-def dataSelection_Set1():
+def DataSelection_Set1():
     """
     Return DataSelection class with default setting
     To test the model under lab environemnt by leave-one-person-out validation
     """
     return DataSelection(split='loov',test_sub='One',val_sub='Four',nuc='NUC1',room=1,sample_per_class=None)
 
-def dataSelection_Set2():
+def DataSelection_Set2():
     """
     Return DataSelection class with default setting
     To test the model under lab environemnt by random-split validation
     """
     return DataSelection(split='random',test_sub=0.2,val_sub=0.1,nuc='NUC1',room=1,sample_per_class=None)
 
-def dataSelection_Set3():
+def DataSelection_Set3():
     """
     Return DataSelection class with default setting
     To test if combine data get better generalization
     """
     return DataSelection(split='loov',test_sub='One',val_sub='Four',nuc=None,room=None,sample_per_class=None)
 
-def dataSelection_Set4(spc=5):
+def DataSelection_Set4(spc=5):
     """
     Return DataSelection class with default setting
     To test model performance under low number of sample
@@ -157,8 +157,7 @@ def dataSelection_Set4(spc=5):
     """
     return DataSelection(split='loov',test_sub='One',val_sub='Four',nuc='NUC1',room=1,sample_per_class=spc)
 
-
-def dataSelection_Set5():
+def DataSelection_Set5():
     """
     **Return a function that perform same functionality to DataSelection class**
     To test the model under unseen environemnt
