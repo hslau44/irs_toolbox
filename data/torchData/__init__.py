@@ -61,9 +61,9 @@ class DataSelection(object):
         self.split = split
         # argument for 'random' split
         if self.split == 'random':
-            assert val_sub < 1-test_sub
             self.train_sub = 1-test_sub
             if val_sub:
+                assert val_sub + test_sub < 1, "val_sub + test_sub must be smaller than 1"
                 self.val_sub = 1-val_sub/self.train_sub
         # argument for 'loov' split
         elif split == 'loov':
