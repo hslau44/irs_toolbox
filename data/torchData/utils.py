@@ -83,7 +83,6 @@ class DatasetObject(Dataset):
     def __getitem__(self, idx):
         fp = self.filepaths[idx]
         X = pd.read_csv(fp,header=None).to_numpy()
-        X = torch.Tensor(X)
         if self.transform:
             X = self.transform(X)
         y = np.int64(self.label[idx])
