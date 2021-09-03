@@ -270,14 +270,14 @@ class DataLoading(object):
 
         return train_loader,val_loader,test_loader
 
-def dataLoading_CnnLstmS():
+def DataLoading_CnnLstmS():
     """dataLoading_cnnLstmS"""
-    transform = CnnLstmS()
+    transform = Transform_CnnLstmS()
     return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
 
-def dataLoading_CnnS():
+def DataLoading_CnnS():
     """dataLoading_CnnS"""
-    transform = CnnS()
+    transform = Transform_CnnS()
     return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
 
 def Transform_CnnLstmS():
@@ -325,10 +325,3 @@ def Transform_CnnS():
     train_loader,val_loader,test_loader = dataloading(train,val,test)
     """
     return T.Compose([ReduceRes(),Unsqueeze()])
-
-def Transform_ResNet():
-    """
-    Torch Transformation (torchvision.transforms.transforms.Compose)
-    for resolution-reduced ResNet (3 channels)
-    """
-    return T.Compose([ReduceRes(),CutFrame(),Unsqueeze(),StackChannel()])
