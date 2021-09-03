@@ -124,5 +124,6 @@ class DatasetObject_Npy(DatasetObject):
         X = np.load(fp)
         if self.transform:
             X = self.transform(X)
+            X = torch.from_numpy(X).float()
         y = np.int64(self.label[idx])
         return X,y
