@@ -32,7 +32,7 @@ torch.cuda.set_device(DEVICE)
 device = DEVICE
 
 ## I/O directory
-data_dir = 'E:\external_data\opera_csi\Session_2\experiment_data\experiment_data\exp_7_amp_spec_only\spectrogram_multi'
+data_dir = 'E:\\external_data\\opera_csi\\Session_2\\experiment_data\\experiment_data\\exp_7_amp_spec_only\\npy_format'
 charsplit = '\\'
 record_outpath = './record'
 
@@ -46,7 +46,7 @@ data_selection = torchData.DataSelection(split='random',
                                          sample_per_class=11)
 
 # data loading
-data_loading = torchData.DataLoading(transform=torchData.CnnLstmS(),
+data_loading = torchData.DataLoading(transform=torchData.Transform_CnnLstmS(),
                                      load_data=False,
                                      num_workers=1)
 
@@ -55,7 +55,7 @@ network_name = 'CNNLSTM'
 model_builder = CNN_LSTM
 optimizer_builder = torch.optim.SGD
 lr = 0.0005
-epochs = 1
+epochs = 10
 
 # Experiment Name
 comment = 'TestMain'
@@ -64,7 +64,7 @@ exp_name = f'{network_name}_Supervised_{dataselection_name}_Comment-{comment}'
 #####################################################################################################################
 
 def class_weight(df,col):
-    return torch.FloatTensor([1-w for w in df[col].value_counts(normalize=True).sort_index().tolist()])
+    return torch.DoubleTensor([1-w for w in df[col].value_counts(normalize=True).sort_index().tolist()])
 
 def reg_loss(model,device,factor=0.0005):
     """
