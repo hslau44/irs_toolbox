@@ -213,16 +213,12 @@ class DataLoading(object):
     train_loader,val_loader,test_loader = dataloading(train,val,test)
     """
 
-    def __init__(self,transform,load_data=False,batch_size=64,test_size='batch',shuffle=False,num_workers=0,pin_memory=False):
+    def __init__(self,transform,load_data=False,batch_size=64,test_size='batch',**kwargs):
         self.transform = transform
         self.load_data = load_data
         self.batch_size = batch_size
         self.test_size = test_size
-
-        self.shuffle = shuffle
-        self.num_workers = num_workers
-        self.pin_memory = pin_memory
-
+        self.kwargs = kwargs
 
     def __call__(self,train,val=None,test=None):
         """
@@ -247,12 +243,7 @@ class DataLoading(object):
 
         if self.load_data: train_obj = train_obj.load_data()
 
-        train_loader = DataLoader(train_obj,
-                                  batch_size=self.batch_size,
-                                  shuffle=self.shuffle,
-                                  num_workers=self.num_workers,
-                                  pin_memory=self.pin_memory)
-
+        train_loader = DataLoader(train_obj,batch_size=self.batch_size,**self.kwargs)
 
         if isinstance(val,pd.DataFrame):
             val_obj = DatasetObject(filepaths=val['fullpath'].to_numpy(),
@@ -261,11 +252,7 @@ class DataLoading(object):
 
             if self.load_data: val_obj = val_obj.load_data()
 
-            val_loader = DataLoader(val_obj,
-                                    batch_size=self.batch_size,
-                                    shuffle=self.shuffle,
-                                    num_workers=self.num_workers,
-                                    pin_memory=self.pin_memory)
+            val_loader = DataLoader(val_obj,batch_size=self.batch_size,**self.kwargs)
 
         if isinstance(test,pd.DataFrame):
             test_obj = DatasetObject(filepaths=test['fullpath'].to_numpy(),
@@ -275,18 +262,11 @@ class DataLoading(object):
             if self.load_data: test_obj = test_obj.load_data()
 
             if self.test_size == 'full':
-                shuffle = False
                 batch_size = test.shape[0]
             else:
-                shuffle = True
                 batch_size = self.batch_size
 
-
-            test_loader = DataLoader(test_obj,
-                                     batch_size=batch_size,
-                                     shuffle=shuffle,
-                                     num_workers=self.num_workers,
-                                     pin_memory=self.pin_memory)
+            test_loader = DataLoader(test_obj,batch_size=self.batch_size,**self.kwargs)
 
         return train_loader,val_loader,test_loader
 
