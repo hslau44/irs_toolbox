@@ -3,7 +3,7 @@ from sklearn.preprocessing import LabelEncoder
 import torchvision.transforms as T
 from torch.utils.data import DataLoader
 from data.torchData.custom_data import filepath_dataframe
-from data.torchData.utils import DatasetObject
+from data.torchData.utils import DatasetObject_Npy as DatasetObject
 from data.torchData.data_selection import *
 from data.torchData.transformation import *
 

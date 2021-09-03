@@ -100,3 +100,29 @@ class DatasetObject(Dataset):
         tensordataset = torch.utils.data.TensorDataset(X,Y)
         print('')
         return tensordataset
+
+class DatasetObject_Npy(DatasetObject):
+
+    def __init__(self,filepaths,label,transform=None):
+        """
+        Customized PyTorch Dataset, currently only support npy files
+
+        Attribute:
+        filepaths (numpy.ndarray): 1D array of filepaths, file must be in npy format
+        label (numpy.ndarray): 1D array of corresponding label
+        transfrom (torchvision.transforms): data transformation pipeline
+
+        """
+        # assert len(filepaths) == len(label)
+        super(DatasetObject_Npy, self).__init__(filepaths,label,transform)
+
+    def __len__(self):
+        return len(self.filepaths)
+
+    def __getitem__(self, idx):
+        fp = self.filepaths[idx]
+        X = np.load(fp)
+        if self.transform:
+            X = self.transform(X)
+        y = np.int64(self.label[idx])
+        return X,y
