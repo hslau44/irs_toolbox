@@ -1,102 +1,105 @@
-import glob
+import torch
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder,MinMaxScaler
-from sklearn.utils import shuffle
 
-from torch import Tensor
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.preprocessing import LabelEncoder
-
-# ---------------------------------sub------------------------------------------
-
-
-
-
-
-
-# ---------------------------------main------------------------------------------
-
-
-
-def slide(*arrays, window_size, slide_size):
+class Transform(object):
     """
-    slide the 0 axis of the arrays to create new data with window_size
+    Custom Transform
 
-    Parameters:
-    arrays (numpy.ndarray<obj>): input array
-    window_size (int): window_size
-    slide_size (int): skipping factor
-
-    Returns:
-    arrays: with size (number of augmented sample,window_size,...)
-
+    Level 1: ReduceRes(),CutFrame()
+    Level 2: Unsqueeze(),UnsqueezebyRearrange(),StackChannel()
+    Level 3: ToStackImg()
     """
-    length = arrays[0].shape[0]
 
-    for arr in arrays:
-        assert arr.shape[0] == length, "all array in arrays must has same length"
+    def __init__(self):
+        pass
 
-    assert window_size <= length, "window size must not be larger than the length of arrays"
+    def __call__(self, X):
+        return X
 
-    new_arrays = []
-
-    for arr in arrays:
-
-        data = []
-
-        for i in range(0, length-window_size+1, slide_size):
-
-            d = arr[i:i+window_size]
-
-            data.append(d)
-
-        data = np.array(data)
-
-        new_arrays.append(data)
-
-    return new_arrays
-
-# ---------------------------------helper------------------------------------------
-
-def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
-    """helper function of slide for DatasetObj"""
-    X, y, z = slide(X, y, z, window_size=window_size, slide_size=slide_size)
-    y = major_vote(y,impurity=0.01)
-    if skip_labels != None:
-        for lb in skip_labels:
-            X, y, z = where(X, y, z, condition=(y!=lb))
-    return X, y, z
-
-def stacking(x):
-    """Increase channel dimension from 1 to 3"""
-    x = x.reshape(*x.shape,1)
-    return np.concatenate((x,x,x),axis=3)
-
-def breakpoints(ls):
-    """find the index where element in ls(list) changes"""
-    points = []
-    for i in range(len(ls)-1):
-        if ls[i+1] != ls[i]:
-            points.append(i)
-    return points
-
-
-
-
-def label_encode(label,enc=None):
-    """return label-encoded array and its LabelEncoder, or apply a predefined LabelEncoder on the label
-
-    Arguments:
-    label (np.ndarry): label, must be flatten
-    enc (sklearn.preprocessing.LabelEncoder): the optional predefined LabelEncoder
-
-    Return
-    label (np.ndarry): encoded label
-    enc (sklearn.preprocessing.LabelEncoder):  newly-create/predefined LabelEncoder
+# Lv1
+class ReduceRes(Transform):
     """
-    if enc == None:
-        enc = LabelEncoder()
-        enc.fit(label)
-    label = enc.transform(label)
-    return label, enc
+    **Custom** Reduce time resolution by factor of 4
+    """
+    def __call__(self, X):
+        return X[:,::4]
+
+class CutFrame(Transform):
+    """
+    **Custom** Cut half of the 1-channel Amptitude-PhaseShift to retain either Amptitude or PhaseShift
+    """
+    def __init__(self,keep='Amp'):
+        dic = {'Amp':70,'Phase':0}
+        self.idx = dic[keep]
+
+    def __call__(self, X):
+        return X[self.idx:self.idx+70,:]
+
+# Lv2
+class Unsqueeze(Transform):
+    """
+    unsqueeze channel
+
+    Example:
+    input: tensor with shape (70,1600)
+    dim: 0
+    return: tensor with shape (1,70,1600)
+    """
+    def __init__(self,dim=0):
+        self.dim = dim
+
+    def __call__(self, X):
+        return np.expand_dims(X,axis=self.dim)
+
+class StackChannel(Transform):
+    """
+    Make copy of the image and stack along the channel to increase the number of channel
+
+    Example:
+    input: tensor with shape (1,70,1600)
+    stack: 3
+    dim: 0
+    return: tensor with shape (3,70,1600)
+    """
+    def __init__(self,stack=3,dim=0):
+        self.stack = stack
+        self.dim = dim
+
+    def __call__(self, X):
+        assert len(X.shape) == 3 and X.shape[0] == 1, f'torchsize must be (1,w,l), current size: {X.shape}'
+        return np.concatenate([X for _ in range(self.stack)],axis=self.dim)
+
+class UnsqueezebyRearrange(Transform):
+    """
+    **Custom** transform 1-channel Amptitude-PhaseShift frame into 2 channel frame, with Amptitude on top of PhaseShift
+
+    Example:
+    input: tensor with shape (1,140,1600)
+    return: tensor with shape (2,70,1600)
+    """
+    def __call__(self, X):
+        r,w = X.shape
+        return X.reshape(2,r//2,w)
+
+# Lv3
+class ToStackImg(Transform):
+    """
+    Transform a 1 long-frame into numbers of small-frames
+
+    Arugments:
+    n_seq:  number of frames to be return
+
+    Example:
+    input: tensor with shape (1,70,1600)
+    n_seq: 10
+    return: tensor with shape (10,1,70,160)
+    """
+    def __init__(self,n_seq):
+        self.n_seq = n_seq
+
+    def __call__(self, X):
+        c,r,w = X.shape
+        assert w%self.n_seq == 0, 'length must be able to be divided by n_seq'
+        X = X.reshape(c,r,self.n_seq,w//self.n_seq)
+        return np.transpose(X,(2,0,1,3))

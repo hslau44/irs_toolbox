@@ -127,3 +127,11 @@ class DatasetObject_Npy(DatasetObject):
             X = torch.from_numpy(X).float()
         y = np.int64(self.label[idx])
         return X,y
+
+def breakpoints(ls):
+    """find the index where element in ls(list) changes"""
+    points = []
+    for i in range(len(ls)-1):
+        if ls[i+1] != ls[i]:
+            points.append(i)
+    return points
