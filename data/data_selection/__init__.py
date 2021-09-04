@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
-from data.data_selection.utils import *
+from data.data_selection.utils import resampling,random_split,leaveOneOut_split
 
 
 class DataSelection(object):

@@ -1,7 +1,6 @@
 import pandas as pd
 from torch.utils.data import DataLoader
 from data.torchData import DatasetObject_Npy as DatasetObject
-from data.data_selection import *
 from data.transformation import *
 
 
