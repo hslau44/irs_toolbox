@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from data.data_selection.utils import *
- 
+
 
 class DataSelection(object):
     """
@@ -126,7 +126,6 @@ class DataSelection(object):
         test = resampling(test,'activity',oversampling=False)
 
         return train,val,test
-
 
 def DataSelection_Set1():
     """
