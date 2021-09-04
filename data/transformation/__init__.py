@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import pandas as pd
+import torchvision.transforms as T
 
 class Transform(object):
     """
@@ -127,3 +128,17 @@ class ToStackImg(Transform):
         assert w%self.n_seq == 0, 'length must be able to be divided by n_seq'
         X = X.reshape(c,r,self.n_seq,w//self.n_seq)
         return np.transpose(X,(2,0,1,3))
+
+def Transform_CnnLstmS():
+    """
+    Torch Transformation (torchvision.transforms.transforms.Compose)
+    for resolution-reduced CNN-LSTM
+    """
+    return T.Compose([ReduceRes(),Unsqueeze(),ToStackImg(25)])
+
+def Transform_CnnS():
+    """
+    Torch Transformation (torchvision.transforms.transforms.Compose)
+    for resolution-reduced CNN
+    """
+    return T.Compose([ReduceRes(),Unsqueeze()])
