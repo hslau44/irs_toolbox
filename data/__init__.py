@@ -86,7 +86,7 @@ class DataLoading(object):
             else:
                 batch_size = self.batch_size
 
-            test_loader = DataLoader(test_obj,batch_size=self.batch_size,**self.kwargs)
+            test_loader = DataLoader(test_obj,batch_size=batch_size,**self.kwargs)
 
         return train_loader,val_loader,test_loader
 
