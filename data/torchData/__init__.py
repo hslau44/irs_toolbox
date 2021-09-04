@@ -40,6 +40,8 @@ class DataLoading(object):
         self.test_size = test_size
         self.kwargs = kwargs
 
+        self.readtype = kwargs.get('readtype','npy')
+
     def __call__(self,train,val=None,test=None):
         """
         load train-validation-test set into corresponding torch DataLoader
@@ -59,7 +61,8 @@ class DataLoading(object):
 
         train_obj = DatasetObject(filepaths=train['fullpath'].to_numpy(),
                                   label=train['activity'].to_numpy(),
-                                  transform=self.transform)
+                                  transform=self.transform,
+                                  readtype=self.readtype)
 
         if self.load_data: train_obj = train_obj.load_data()
 
@@ -68,7 +71,8 @@ class DataLoading(object):
         if isinstance(val,pd.DataFrame):
             val_obj = DatasetObject(filepaths=val['fullpath'].to_numpy(),
                                       label=val['activity'].to_numpy(),
-                                      transform=self.transform)
+                                      transform=self.transform,
+                                      readtype=self.readtype)
 
             if self.load_data: val_obj = val_obj.load_data()
 
@@ -77,7 +81,8 @@ class DataLoading(object):
         if isinstance(test,pd.DataFrame):
             test_obj = DatasetObject(filepaths=test['fullpath'].to_numpy(),
                                       label=test['activity'].to_numpy(),
-                                      transform=self.transform)
+                                      transform=self.transform,
+                                      readtype=self.readtype)
 
             if self.load_data: test_obj = test_obj.load_data()
 
