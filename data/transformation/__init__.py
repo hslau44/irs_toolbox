@@ -37,14 +37,28 @@ class ReduceRes(Transform):
 
 class CutFrame(Transform):
     """
-    **Custom** Cut half of the 1-channel Amptitude-PhaseShift to retain either Amptitude or PhaseShift
+    Cut frame
     """
-    def __init__(self,keep='Amp'):
-        dic = {'Amp':70,'Phase':0}
+    def __init__(self,x0=0,x1=70,y0=0,y1=None):
+        if x1:
+            assert x0 < x1
+        if y1:
+            assert y0 < y1
         self.idx = dic[keep]
+        self.x0 = x0
+        self.x1 = x1
+        self.y0 = y0
+        self.y1 = y1
 
     def __call__(self, X):
-        return X[self.idx:self.idx+70,:]
+        x1,y1 = self.x1,self.y1
+        if x1 == None:
+            x1 = X.shape[0]
+        if y1 == None:
+            y1 = X.shape[1]
+        assert x1 <= X.shape[0]
+        assert y1 <= X.shape[1]
+        return X[self.x0:x1,self.y0:y1]
 
 # Lv2
 class Unsqueeze(Transform):
