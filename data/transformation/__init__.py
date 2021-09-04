@@ -21,8 +21,6 @@ class Transform(object):
                 X = f(X)
         elif hasattr(self.func,'__call__'):
             X = self.func(X)
-        else:
-            continue
         return X
 
 # Lv1
