@@ -5,29 +5,41 @@ from torch.utils.data import Dataset
 
 class DatasetObject(Dataset):
 
-    def __init__(self,filepaths,label=None,transform=None):
+    def __init__(self,filepaths,label=None,transform=None,readtype='npy'):
         """
-        Customized PyTorch Dataset, currently only support csv files
+        Customized PyTorch Dataset
 
         Attribute:
         filepaths (numpy.ndarray): 1D array of filepaths, file must be in csv format
         label (numpy.ndarray): 1D array of corresponding label
         transfrom (torchvision.transforms): data transformation pipeline
-
+        readtype(str): currently support 'csv' and 'npy'
         """
-        # assert len(filepaths) == len(label)
+        if isinstance(label,np.ndarray):
+            assert len(filepaths) == len(label)
+        assert readtype in ['csv','npy']
         self.filepaths = filepaths
-        self.transform = transform
+        self.readtype = readtype
         self.label = label
+        self.transform = transform
 
     def __len__(self):
         return len(self.filepaths)
 
     def __getitem__(self, idx):
+        # filepath
         fp = self.filepaths[idx]
-        X = pd.read_csv(fp,header=None).to_numpy()
+        if self.readtype == 'csv':
+            X = pd.read_csv(fp,header=None).to_numpy()
+        elif self.readtype == 'npy':
+            X = np.load(fp)
+        else:
+            raise Exception('')
+        # transform
         if self.transform:
             X = self.transform(X)
+            X = torch.from_numpy(X).float()
+        # label
         if isinstance(self.label,np.ndarray):
             y = np.int64(self.label[idx])
             return X,y
@@ -46,33 +58,6 @@ class DatasetObject(Dataset):
         tensordataset = torch.utils.data.TensorDataset(X,Y)
         print('')
         return tensordataset
-
-class DatasetObject_Npy(DatasetObject):
-
-    def __init__(self,filepaths,label,transform=None):
-        """
-        Customized PyTorch Dataset, currently only support npy files
-
-        Attribute:
-        filepaths (numpy.ndarray): 1D array of filepaths, file must be in npy format
-        label (numpy.ndarray): 1D array of corresponding label
-        transfrom (torchvision.transforms): data transformation pipeline
-
-        """
-        # assert len(filepaths) == len(label)
-        super(DatasetObject_Npy, self).__init__(filepaths,label,transform)
-
-    def __len__(self):
-        return len(self.filepaths)
-
-    def __getitem__(self, idx):
-        fp = self.filepaths[idx]
-        X = np.load(fp)
-        if self.transform:
-            X = self.transform(X)
-            X = torch.from_numpy(X).float()
-        y = np.int64(self.label[idx])
-        return X,y
 
 class PairDataset(DatasetObject):
 
