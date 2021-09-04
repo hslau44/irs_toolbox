@@ -11,8 +11,11 @@ def list_all_filepaths(directory):
     """
     Return all filepaths in the directory with targeted format
 
-    Arugments
-    directory (str)
+    Arugments:
+    directory (str): the directory of the files
+
+    Return
+    filepaths (list): all filepaths of the files
     """
     filepaths = []
     for r, d, f in os.walk(directory):
@@ -56,6 +59,14 @@ def filepath_dataframe(directory,splitchar='\\'):
 
     return df
 
+
+def breakpoints(ls):
+    """find the index where element in ls(list) changes"""
+    points = []
+    for i in range(len(ls)-1):
+        if ls[i+1] != ls[i]:
+            points.append(i)
+    return points
 
 def visual_spectrogram(img,title='spectrogram',figsize=(15,50)):
     """
