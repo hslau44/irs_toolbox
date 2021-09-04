@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 
 class DatasetObject(Dataset):
 
-    def __init__(self,filepaths,label,transform=None):
+    def __init__(self,filepaths,label=None,transform=None):
         """
         Customized PyTorch Dataset, currently only support csv files
 
@@ -28,8 +28,11 @@ class DatasetObject(Dataset):
         X = pd.read_csv(fp,header=None).to_numpy()
         if self.transform:
             X = self.transform(X)
-        y = np.int64(self.label[idx])
-        return X,y
+        if isinstance(self.label,np.ndarray):
+            y = np.int64(self.label[idx])
+            return X,y
+        else:
+            return X
 
     def load_data(self):
         X,Y = [],[]
