@@ -12,10 +12,17 @@ class Transform(object):
     Level 3: ToStackImg()
     """
 
-    def __init__(self):
-        pass
+    def __init__(self,func=None):
+        self.func = func
 
     def __call__(self, X):
+        if isinstance(self.func,list):
+            for f in self.func:
+                X = f(X)
+        elif hasattr(self.func,'__call__'):
+            X = self.func(X)
+        else:
+            continue
         return X
 
 # Lv1
