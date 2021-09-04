@@ -60,6 +60,8 @@ class Selection(object):
             if val_sub:
                 assert val_sub + test_sub < 1, "val_sub + test_sub must be smaller than 1"
                 self.val_sub = 1-val_sub/self.train_sub
+            else:
+                self.val_sub = None
         # argument for 'loov' split
         elif split == 'loov':
             self.test_sub = test_sub
@@ -112,10 +114,10 @@ class Selection(object):
 
         elif self.split == 'loov':
 
-            train,test = leaveOneOut_split(df,column='activity',testsub=self.test_sub)
+            train,test = leaveOneOut_split(df,column='person',testsub=self.test_sub)
 
             if self.val_sub:
-                train,val = leaveOneOut_split(train,column='activity',testsub=self.val_sub)
+                train,val = leaveOneOut_split(train,column='person',testsub=self.val_sub)
 
         else:
             raise ValueError("split must be either 'loov' or 'random'")
@@ -132,21 +134,21 @@ def SelectionSet_1():
     Return DataSelection class with default setting
     To test the model under lab environemnt by leave-one-person-out validation
     """
-    return DataSelection(split='loov',test_sub='One',val_sub='Four',nuc='NUC1',room=1,sample_per_class=None)
+    return Selection(split='loov',test_sub='One',val_sub='Four',nuc='NUC1',room=1,sample_per_class=None)
 
 def SelectionSet_2():
     """
     Return DataSelection class with default setting
     To test the model under lab environemnt by random-split validation
     """
-    return DataSelection(split='random',test_sub=0.2,val_sub=0.1,nuc='NUC1',room=1,sample_per_class=None)
+    return Selection(split='random',test_sub=0.2,val_sub=0.1,nuc='NUC1',room=1,sample_per_class=None)
 
 def SelectionSet_3():
     """
     Return DataSelection class with default setting
     To test if combine data get better generalization
     """
-    return DataSelection(split='loov',test_sub='One',val_sub='Four',nuc=None,room=None,sample_per_class=None)
+    return Selection(split='loov',test_sub='One',val_sub='Four',nuc=None,room=None,sample_per_class=None)
 
 def SelectionSet_4(spc=5):
     """
@@ -156,7 +158,7 @@ def SelectionSet_4(spc=5):
     Arguments:
     spc (int) - number of sample per class
     """
-    return DataSelection(split='loov',test_sub='One',val_sub='Four',nuc='NUC1',room=1,sample_per_class=spc)
+    return Selection(split='loov',test_sub='One',val_sub='Four',nuc='NUC1',room=1,sample_per_class=spc)
 
 def SelectionSet_5():
     """
@@ -170,8 +172,8 @@ def SelectionSet_5():
         train = df[df['room'] == 1]
         test  = df[df['room'] == 2]
 
-        train,val, _ = leaveOneOut_split(train,testsub='One',valsub='Four')
-        _ , _ , test = leaveOneOut_split(test,testsub='One',valsub='Four')
+        train,val = leaveOneOut_split(train,column='person',testsub='One')
+        _ , test  = leaveOneOut_split(test,column='person',testsub='Two')
 
         test = resampling(test,'activity',oversampling=False)
         return train,val,test
