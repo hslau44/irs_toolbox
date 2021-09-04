@@ -20,10 +20,20 @@ class Transform(object):
 # Lv1
 class ReduceRes(Transform):
     """
-    **Custom** Reduce time resolution by factor of 4
+    Reduce time resolution by factors
+
+    Arguements:
+    x (int) - factor on axis 0
+    y (int) - factor on axis 1
     """
+    def __init__(self,x=1,y=4):
+        assert x>0 and y>0, f'factor x and y must be > 1, get{x,y}'
+        self.x = x
+        self.y = y
+
     def __call__(self, X):
-        return X[:,::4]
+        assert len(X.shape) == 2, 'input array dimensions must be equal to 2'
+        return X[::self.x,::self.y]
 
 class CutFrame(Transform):
     """
