@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
-from data.torchData.utils import list_all_filepaths
+from data.utils import list_all_filepaths
 
 
 def filepath_dataframe(directory,split='\\'):
