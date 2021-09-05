@@ -58,7 +58,7 @@ epochs = 10
 
 # Model
 def model_builder():
-    model = CNN_LSTM(n_classes = 6).float()
+    model = CNN_LSTM(n_classes = 6)
     return model
 
 network_name = 'CNNLSTM'

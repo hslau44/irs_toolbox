@@ -38,6 +38,7 @@ class DatasetObject(Dataset):
         # transform
         if self.transform:
             X = self.transform(X)
+        if self.readtype == 'npy':
             X = torch.from_numpy(X).float()
         # label
         if isinstance(self.label,np.ndarray):

@@ -14,7 +14,7 @@ import torch
 #####################################################################################################################
 
 def class_weight(df,col):
-    return torch.DoubleTensor([1-w for w in df[col].value_counts(normalize=True).sort_index().tolist()])
+    return torch.FloatTensor([1-w for w in df[col].value_counts(normalize=True).sort_index().tolist()])
 
 def reg_loss(model,device,factor=0.0005):
     """
