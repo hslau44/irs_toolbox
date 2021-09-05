@@ -17,8 +17,8 @@ from data.custom_data import filepath_dataframe
 from data.selection import Selection
 from data.transformation import Transform_CnnLstmS,Transform_CnnS
 from data.torchData import DataLoadings,DataLoading
-from models.temporal import CNN_LSTM
 from train import class_weight,evaluation,record_log,train
+import models
 
 #####################################################################################################################
 
@@ -45,26 +45,26 @@ data_selection = Selection(split='random',test_sub=0.2,val_sub=0.1,
                            nuc='NUC1',room=1,sample_per_class=None)
 
 # data loading
-transform = Transform_CnnLstmS()
+transform = Transform_CnnS()
 batch_size = 64
 num_workers = 0
 
 # training
-
 optimizer_builder = torch.optim.SGD
-lr = 0.0005
-epochs = 10
+lr = 0.001
+epochs = 100
 
 
 # Model
 def model_builder():
-    model = CNN_LSTM(n_classes = 6)
+    net,size = models.cnn.create_alexnet((1,4))
+    model = models.add_classifier(net,size,6,False)
     return model
 
-network_name = 'CNNLSTM'
+network_name = 'AlexNet'
 
 # Experiment Name
-comment = 'TestMain'
+comment = 'TestModel'
 exp_name = f'{network_name}_Supervised_{dataselection_name}_Comment-{comment}'
 
 # -----------------------------------Main-------------------------------------------
