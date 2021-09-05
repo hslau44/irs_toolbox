@@ -33,16 +33,14 @@ class DataLoading(object):
     train_loader,val_loader,test_loader = dataloading(train,val,test)
     """
 
-    def __init__(self,transform,load_data=False,batch_size=64,test_size='batch',**kwargs):
+    def __init__(self,transform,batch_size,readtype='npy',load_data=False,**kwargs):
         self.transform = transform
-        self.load_data = load_data
         self.batch_size = batch_size
-        self.test_size = test_size
+        self.readtype = readtype
+        self.load_data = load_data
         self.kwargs = kwargs
 
-        self.readtype = kwargs.get('readtype','npy')
-
-    def __call__(self,train,val=None,test=None):
+    def __call__(self,df):
         """
         load train-validation-test set into corresponding torch DataLoader
 
@@ -57,50 +55,55 @@ class DataLoading(object):
         test_loader (torch.utils.data.DataLoader) - torch DataLoader of the test set
 
         """
-        train_loader,val_loader,test_loader = None, None, None
+        datasetobj = DatasetObject(filepaths=df['fullpath'].to_numpy(),
+                                   label=df['activity'].to_numpy(),
+                                   transform=self.transform,
+                                   readtype=self.readtype)
 
-        train_obj = DatasetObject(filepaths=train['fullpath'].to_numpy(),
-                                  label=train['activity'].to_numpy(),
-                                  transform=self.transform,
-                                  readtype=self.readtype)
+        if self.load_data: train_obj = datasetobj.load_data()
 
-        if self.load_data: train_obj = train_obj.load_data()
+        data_loader = DataLoader(datasetobj,batch_size=self.batch_size,**self.kwargs)
 
-        train_loader = DataLoader(train_obj,batch_size=self.batch_size,**self.kwargs)
+        return data_loader
 
-        if isinstance(val,pd.DataFrame):
-            val_obj = DatasetObject(filepaths=val['fullpath'].to_numpy(),
-                                      label=val['activity'].to_numpy(),
-                                      transform=self.transform,
-                                      readtype=self.readtype)
+def DataLoadings(transform,batch_size,test_size='batch',readtype='npy',load_data=False,**kwargs):
+    def func(train,val=None,test=None):
 
-            if self.load_data: val_obj = val_obj.load_data()
+        data_loading = DataLoading(transform=transform,
+                                  batch_size=batch_size,
+                                  readtype=readtype,
+                                  load_data=load_data,
+                                  **kwargs)
 
-            val_loader = DataLoader(val_obj,batch_size=self.batch_size,**self.kwargs)
+        train_loader = data_loading(train)
 
-        if isinstance(test,pd.DataFrame):
-            test_obj = DatasetObject(filepaths=test['fullpath'].to_numpy(),
-                                      label=test['activity'].to_numpy(),
-                                      transform=self.transform,
-                                      readtype=self.readtype)
+        if isinstance(val,pd.core.frame.DataFrame):
+            val_loader = data_loading(val)
+        else:
+            val_loader = None
 
-            if self.load_data: test_obj = test_obj.load_data()
+        if isinstance(test,pd.core.frame.DataFrame):
+            bs = len(test) if test_size == 'full' else batch_size
+            test_loading = DataLoading(transform=transform,
+                                      batch_size=bs,
+                                      readtype=readtype,
+                                      load_data=load_data,
+                                      **kwargs)
 
-            if self.test_size == 'full':
-                batch_size = test.shape[0]
-            else:
-                batch_size = self.batch_size
+            test_loader = test_loading(test)
+        else:
+            test_loader = None
+        return train_loader, val_loader, test_loader
+    return func
 
-            test_loader = DataLoader(test_obj,batch_size=batch_size,**self.kwargs)
 
-        return train_loader,val_loader,test_loader
 
 def DataLoading_CnnLstmS():
     """dataLoading_cnnLstmS"""
     transform = Transform_CnnLstmS()
-    return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
+    return DataLoadings(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
 
 def DataLoading_CnnS():
     """dataLoading_CnnS"""
     transform = Transform_CnnS()
-    return DataLoading(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
+    return DataLoadings(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
