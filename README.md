@@ -27,7 +27,7 @@ For demonstration, please run the following commands in the project's root direc
 ├── checkpoint // were we store the trained models
 ├── data // quick data import and transformation pipeline
 │ ├── selection // data selection for train-validation-test split
-│ ├── transformation // custom transformation, e.g. resize and data augmentation
+│ ├── transformation // custom transformation compatible with torchvision.transform
 │ ├── torchData // custom torch Dataset and DataLoader
 │ ├── custom_data.py // data for specific format
 │ ├── load_npy_format.py // tranform and load csv files into npy files
@@ -40,7 +40,7 @@ For demonstration, please run the following commands in the project's root direc
 │ ├── baseline.py // baseline models
 │ ├── cnn.py // torchvision models
 │ ├── self_supervised.py // torch.nn.module for contrastive learning
-│ ├── temproal.py //
+│ ├── temproal.py // CNN-LSTM
 │ └── utils.py // utility torch.nn.module
 ├── playground.ipynb // fast experiment with things
 ├── contrastive_learning.ipynb // the notebook version of main.py
