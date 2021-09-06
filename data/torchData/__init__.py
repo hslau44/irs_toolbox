@@ -20,9 +20,9 @@ class DataLoading(object):
     Example:
     import torchvision.transforms as T
     from torchData.utils import filepath_dataframe
-    from torchData import DataSelection,DataLoading
+    from torchData import Selection,DataLoading
 
-    dataselection = DataSelection(split='loov',
+    dataselection = Selection(split='loov',
                                   test_sub=0.2,
                                   val_sub=0.1)
 
@@ -31,7 +31,7 @@ class DataLoading(object):
 
     df = filepath_dataframe(directory)
     train,val,test = dataselection(df)
-    train_loader,val_loader,test_loader = dataloading(train,val,test)
+    train_loader = dataloading(train)
     """
 
     def __init__(self,transform,batch_size,readtype='npy',load_data=False,**kwargs):
