@@ -1,176 +1,149 @@
-import glob
+import torch
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder,MinMaxScaler
-from sklearn.utils import shuffle
-from collections import Counter
-from torch import Tensor
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.preprocessing import LabelEncoder
+import torchvision.transforms as T
 
-# ---------------------------------sub------------------------------------------
-
-def major_vote_(arr, impurity_threshold=0.01):
+class Transform(object):
     """
-    Returns the elment of an array which has the majority
+    Custom Transform
 
-    Parameters:
-    arr (numpy.ndarray<obj>): input array,  elements type must be consistent and with type {int,str}. Array undergoes flatten.
-    impurity_threshold (float): if the frequency of the least common element is bigger than impurity_threshold, return to the least common element
-
-    Returns:
-    result (obj): the elment of an array which has the majority
-
+    Level 1: ReduceRes(),CutFrame()
+    Level 2: Unsqueeze(),UnsqueezebyRearrange(),StackChannel()
+    Level 3: ToStackImg()
     """
-    counter = Counter(list(arr.reshape(-1)))
-    lowest_impurity = float(counter.most_common()[-1][-1]/arr.shape[0])
-    if lowest_impurity > impurity_threshold:
-        result = counter.most_common()[-1][0]
-    else:
-        result = counter.most_common()[0][0]
-    return result
 
-def resampling_(arr,oversampling=True):
-    """Return a list of index after resampling from array"""
+    def __init__(self,func=None):
+        self.func = func
+
+    def __call__(self, X):
+        if isinstance(self.func,list):
+            for f in self.func:
+                X = f(X)
+        elif hasattr(self.func,'__call__'):
+            X = self.func(X)
+        return X
+
+# Lv1
+class ReduceRes(Transform):
     """
-    Stratified Sampling of array, return the index for indexing array
+    Reduce time resolution by factors
 
-    Parameters:
-    arr (numpy.ndarray<obj>): input array, array should be 1 dimension to work properly. Elements type must be consistent and with type {int,str}. Array undergoes flatten.
-    oversampling (bool): {True,False}, oversampling if True, else undersampling
-
-    Returns:
-    idx_ls (numpy.ndarray<obj>): index of the array that undergoes Stratified Sampling
-
+    Arguements:
+    x (int) - factor on axis 0
+    y (int) - factor on axis 1
     """
-    series = pd.Series(arr.reshape(-1))
-    value_counts = series.value_counts()
-    if oversampling == True:
-        number_of_sample = value_counts.max()
-        replace = True
-    else:
-        number_of_sample = value_counts.min()
-        replace = False
-    idx_ls = []
-    for item in value_counts.index:
-        idx_ls.append([*series[series==item].sample(n=number_of_sample,replace=replace).index])
-    idx_ls = np.array(idx_ls).reshape(-1,)
-    return idx_ls
+    def __init__(self,x=1,y=4):
+        assert x>0 and y>0, f'factor x and y must be > 1, get{x,y}'
+        self.x = x
+        self.y = y
 
+    def __call__(self, X):
+        assert len(X.shape) == 2, 'input array dimensions must be equal to 2'
+        return X[::self.x,::self.y]
 
-# ---------------------------------main------------------------------------------
-
-def where(*arrays,condition):
-    """select item in multi arguments of numpy.ndarrays based on condition, return arguments of numpy.ndarrays"""
-    return [arr[np.where(condition)] for arr in arrays]
-
-def slide(*arrays, window_size, slide_size):
+class CutFrame(Transform):
     """
-    slide the 0 axis of the arrays to create new data with window_size
-
-    Parameters:
-    arrays (numpy.ndarray<obj>): input array
-    window_size (int): window_size
-    slide_size (int): skipping factor
-
-    Returns:
-    arrays: with size (number of augmented sample,window_size,...)
-
+    Cut frame
     """
-    length = arrays[0].shape[0]
+    def __init__(self,x0=0,x1=70,y0=0,y1=None):
+        if x1:
+            assert x0 < x1
+        if y1:
+            assert y0 < y1
+        self.idx = dic[keep]
+        self.x0 = x0
+        self.x1 = x1
+        self.y0 = y0
+        self.y1 = y1
 
-    for arr in arrays:
-        assert arr.shape[0] == length, "all array in arrays must has same length"
+    def __call__(self, X):
+        x1,y1 = self.x1,self.y1
+        if x1 == None:
+            x1 = X.shape[0]
+        if y1 == None:
+            y1 = X.shape[1]
+        assert x1 <= X.shape[0]
+        assert y1 <= X.shape[1]
+        return X[self.x0:x1,self.y0:y1]
 
-    assert window_size <= length, "window size must not be larger than the length of arrays"
-
-    new_arrays = []
-
-    for arr in arrays:
-
-        data = []
-
-        for i in range(0, length-window_size+1, slide_size):
-
-            d = arr[i:i+window_size]
-
-            data.append(d)
-
-        data = np.array(data)
-
-        new_arrays.append(data)
-
-    return new_arrays
-
-def major_vote(arr,impurity=0.01):
-    """ find the element that has the majority portion in the array, depending on the threshold
-
-    Args:
-    arr: np.ndarray. The target array
-    impurity_threshold: float. If array contain a portion of other elemnets and they are higher than the threshold, the function return element with the smallest portion.
-
-    Return:
-    result: the element that has the majority portion in the array, depending on the threshold
+# Lv2
+class Unsqueeze(Transform):
     """
-    assert len(arr.shape) == 2, "must have only 2 dimension"
-    new_arr = np.zeros(arr.shape[0])
-    for i in range(len(arr)):
-        new_arr[i] = major_vote_(arr[i],impurity)
-    return new_arr
+    unsqueeze channel
 
-def resampling(*arrays,labels,oversampling=True):
-    """Resampling argument"""
-
-    idx_ls = resampling_(labels,oversampling)
-    new_arrays = [arr[idx_ls] for arr in arrays]
-    return new_arrays
-
-# ---------------------------------helper------------------------------------------
-
-def slide_augmentation(X, y, z, window_size, slide_size, skip_labels=None):
-    """helper function of slide for DatasetObj"""
-    X, y, z = slide(X, y, z, window_size=window_size, slide_size=slide_size)
-    y = major_vote(y,impurity=0.01)
-    if skip_labels != None:
-        for lb in skip_labels:
-            X, y, z = where(X, y, z, condition=(y!=lb))
-    return X, y, z
-
-def stacking(x):
-    """Increase channel dimension from 1 to 3"""
-    x = x.reshape(*x.shape,1)
-    return np.concatenate((x,x,x),axis=3)
-
-def breakpoints(ls):
-    """find the index where element in ls(list) changes"""
-    points = []
-    for i in range(len(ls)-1):
-        if ls[i+1] != ls[i]:
-            points.append(i)
-    return points
-
-def selections(*arg,**kwarg):
-    """self implementation of train test split from sklearn, kwarg "p" for train size"""
-    size = int(arg[0].shape[0]*kwarg['p'])
-    index = np.arange(0,arg[0].shape[0])
-    test_selection = np.random.choice(index,size,replace=False)
-    train_selection = np.array([i for i in index if i not in test_selection])
-    return [i[train_selection] for i in arg],[i[test_selection] for i in arg]
-
-
-def label_encode(label,enc=None):
-    """return label-encoded array and its LabelEncoder, or apply a predefined LabelEncoder on the label
-
-    Arguments:
-    label (np.ndarry): label, must be flatten
-    enc (sklearn.preprocessing.LabelEncoder): the optional predefined LabelEncoder
-
-    Return
-    label (np.ndarry): encoded label
-    enc (sklearn.preprocessing.LabelEncoder):  newly-create/predefined LabelEncoder
+    Example:
+    input: tensor with shape (70,1600)
+    dim: 0
+    return: tensor with shape (1,70,1600)
     """
-    if enc == None:
-        enc = LabelEncoder()
-        enc.fit(label)
-    label = enc.transform(label)
-    return label, enc
+    def __init__(self,dim=0):
+        self.dim = dim
+
+    def __call__(self, X):
+        return np.expand_dims(X,axis=self.dim)
+
+class StackChannel(Transform):
+    """
+    Make copy of the image and stack along the channel to increase the number of channel
+
+    Example:
+    input: tensor with shape (1,70,1600)
+    stack: 3
+    dim: 0
+    return: tensor with shape (3,70,1600)
+    """
+    def __init__(self,stack=3,dim=0):
+        self.stack = stack
+        self.dim = dim
+
+    def __call__(self, X):
+        assert len(X.shape) == 3 and X.shape[0] == 1, f'torchsize must be (1,w,l), current size: {X.shape}'
+        return np.concatenate([X for _ in range(self.stack)],axis=self.dim)
+
+class UnsqueezebyRearrange(Transform):
+    """
+    **Custom** transform 1-channel Amptitude-PhaseShift frame into 2 channel frame, with Amptitude on top of PhaseShift
+
+    Example:
+    input: tensor with shape (1,140,1600)
+    return: tensor with shape (2,70,1600)
+    """
+    def __call__(self, X):
+        r,w = X.shape
+        return X.reshape(2,r//2,w)
+
+# Lv3
+class ToStackImg(Transform):
+    """
+    Transform a 1 long-frame into numbers of small-frames
+
+    Arugments:
+    n_seq:  number of frames to be return
+
+    Example:
+    input: tensor with shape (1,70,1600)
+    n_seq: 10
+    return: tensor with shape (10,1,70,160)
+    """
+    def __init__(self,n_seq):
+        self.n_seq = n_seq
+
+    def __call__(self, X):
+        c,r,w = X.shape
+        assert w%self.n_seq == 0, 'length must be able to be divided by n_seq'
+        X = X.reshape(c,r,self.n_seq,w//self.n_seq)
+        return np.transpose(X,(2,0,1,3))
+
+def Transform_CnnLstmS():
+    """
+    Torch Transformation (torchvision.transforms.transforms.Compose)
+    for resolution-reduced CNN-LSTM
+    """
+    return T.Compose([ReduceRes(),Unsqueeze(),ToStackImg(25)])
+
+def Transform_CnnS():
+    """
+    Torch Transformation (torchvision.transforms.transforms.Compose)
+    for resolution-reduced CNN
+    """
+    return T.Compose([ReduceRes(),Unsqueeze()])

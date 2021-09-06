@@ -9,62 +9,12 @@ import sklearn
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, f1_score
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 import torch
-from torch.utils.data import DataLoader, TensorDataset
-from torch import Tensor, nn
-from poutyne import Model,Experiment
 
-from data import torchData
-from data.torchData.custom_data import filepath_dataframe
-from models.temporal import CNN_LSTM
-
-
-#####################################################################################################################
-
-# random seed
-seed = 42
-np.random.seed(seed)
-torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-
-# gpu setting
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-torch.cuda.set_device(DEVICE)
-device = DEVICE
-
-## I/O directory
-data_dir = 'E:\\external_data\\opera_csi\\Session_2\\experiment_data\\experiment_data\\exp_7_amp_spec_only\\npy_format'
-charsplit = '\\'
-record_outpath = './record'
-
-# data selection
-dataselection_name = 'EXP7-NUC1-Room1-Amp-RandomSplit'
-data_selection = torchData.DataSelection(split='random',
-                                         test_sub=0.1,
-                                         val_sub=0.1,
-                                         nuc='NUC1',
-                                         room=1,
-                                         sample_per_class=11)
-
-# data loading
-data_loading = torchData.DataLoading(transform=torchData.Transform_CnnLstmS(),
-                                     load_data=False,
-                                     num_workers=1)
-
-# training
-network_name = 'CNNLSTM'
-model_builder = CNN_LSTM
-optimizer_builder = torch.optim.SGD
-lr = 0.0005
-epochs = 10
-
-# Experiment Name
-comment = 'TestMain'
-exp_name = f'{network_name}_Supervised_{dataselection_name}_Comment-{comment}'
 
 #####################################################################################################################
 
 def class_weight(df,col):
-    return torch.DoubleTensor([1-w for w in df[col].value_counts(normalize=True).sort_index().tolist()])
+    return torch.FloatTensor([1-w for w in df[col].value_counts(normalize=True).sort_index().tolist()])
 
 def reg_loss(model,device,factor=0.0005):
     """
@@ -341,40 +291,3 @@ def save_model(model_outpath,exp_name,phase,model):
     model_fp = model_outpath+'/'+exp_name+'_Phase_'+phase
     torch.save(model.state_dict(), model_fp)
     return model_fp
-
-# -----------------------------------Main-------------------------------------------
-
-if __name__ == '__main__':
-    print('Experiment Name: ',exp_name)
-    print('Cuda Availability: ',torch.cuda.is_available())
-    # data preparation
-    df = filepath_dataframe(data_dir,charsplit)
-    df_train,df_val,df_test = data_selection(df)
-    train_loader,val_loader,test_loader = data_loading(df_train,df_val,df_test)
-
-    # auto_setting
-    n_classes = df['activity'].nunique()
-    weight = class_weight(df_train,'activity').to(device)
-
-    # initial evaluation
-    phase = 'lab-initial'
-    model = model_builder(n_classes=n_classes)
-    criterion = nn.CrossEntropyLoss(weight=weight).to(device)
-    optimizer = optimizer_builder(list(model.parameters()), lr=lr)
-    cmtx,cls = evaluation(model,test_loader)
-    record_log(record_outpath,exp_name,phase,cmtx=cmtx,cls=cls)
-
-    # training
-    phase = 'lab-finetune'
-    model, record = train(model=model,
-                          train_loader=train_loader,
-                          criterion=criterion,
-                          optimizer=optimizer,
-                          end=epochs,
-                          test_loader=test_loader,
-                          device=device,
-                          regularize=False)
-
-    cmtx,cls = evaluation(model,test_loader)
-    acc_rec = True if epochs >= 10 else False
-    record_log(record_outpath,exp_name,phase,record=record,cmtx=cmtx,cls=cls,acc_rec=acc_rec)

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
-from data.torchData.utils import list_all_filepaths,DatasetObject
+from data.utils import list_all_filepaths
 
 
 def filepath_dataframe(directory,split='\\'):
@@ -69,35 +69,3 @@ def nucPaired_fpDataframe(dataframe):
     nuc2 = dataframe[dataframe['nuc'] == 'NUC2'][['key','fullpath']]
 
     return pd.merge(nuc1,nuc2,on='key')
-
-
-class PairDataset(DatasetObject):
-
-    def __init__(self,filepaths,filepaths2,transform=None):
-        """
-        Customized PyTorch Dataset, currently only support csv files
-
-        Attribute:
-        filepaths (numpy.ndarray): 1D array of filepaths on view1, file must be in csv format
-        filepaths2 (numpy.ndarray): 1D array of filepaths on view2, file must be in csv format
-        transfrom (torchvision.transforms): data transformation pipeline
-
-        """
-        super().__init__(filepaths=filepaths,
-                         label=None,
-                         transform=transform)
-
-        self.filepaths2 = filepaths2
-
-    def __len__(self):
-        return len(self.filepaths)
-
-    def __getitem__(self, idx):
-        fp1 = self.filepaths[idx]
-        X1 = pd.read_csv(fp1,header=None).to_numpy()
-        fp2 = self.filepaths[idx]
-        X2 = pd.read_csv(fp2,header=None).to_numpy()
-        if self.transform:
-            X1 = self.transform(X1)
-            X2 = self.transform(X2)
-        return X1,X2
