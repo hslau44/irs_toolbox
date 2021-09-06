@@ -14,6 +14,7 @@ class DataLoading(object):
     transform (torchvision.transforms.transforms.Compose) - transformation pipeline
     load_data (bool) - if True, it loads all corresponing data into DataLoader *** under testing
     batch_size (int) - batch size of train and validation set
+    readtype (str) - currently support 'csv' or 'npy'
     test_size (str) - if test_size = 'full', batch size for test Dataloader equals to size of testset
 
     Example:
@@ -67,6 +68,9 @@ class DataLoading(object):
         return data_loader
 
 def DataLoadings(transform,batch_size,test_size='batch',readtype='npy',load_data=False,**kwargs):
+    """
+    
+    """
     def func(train,val=None,test=None):
 
         data_loading = DataLoading(transform=transform,
@@ -98,12 +102,12 @@ def DataLoadings(transform,batch_size,test_size='batch',readtype='npy',load_data
 
 
 
-def DataLoading_CnnLstmS():
-    """dataLoading_cnnLstmS"""
+def DataLoadings_CnnLstmS():
+    """Default DataLoadings for Resolution-Reduced CNN-LSTM"""
     transform = Transform_CnnLstmS()
     return DataLoadings(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
 
-def DataLoading_CnnS():
-    """dataLoading_CnnS"""
+def DataLoadings_CnnS():
+    """Default DataLoadings for Resolution-Reduced CNN"""
     transform = Transform_CnnS()
     return DataLoadings(transform,batch_size=64,test_size='full',shuffle=False,num_workers=0)
