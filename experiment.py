@@ -35,6 +35,7 @@ device = DEVICE
 
 ## I/O directory
 data_dir  = 'E:\\external_data\\opera_csi\\Session_2\\experiment_data\\experiment_data\\exp_7_amp_spec_only\\npy_format'
+readtype = 'npy'
 splitchar = '\\'
 record_outpath = './record'
 
@@ -80,8 +81,10 @@ if __name__ == '__main__':
     df_train,df_val,df_test = data_selection(df)
 
     # data loading
-    data_loading = DataLoading(transform=transform,batch_size=batch_size,num_workers=num_workers)
-    test_loading = DataLoading(transform=transform,batch_size=len(df_test),num_workers=num_workers)
+    data_loading = DataLoading(transform=transform,batch_size=batch_size,readtype=readtype,
+                               num_workers=num_workers)
+    test_loading = DataLoading(transform=transform,batch_size=len(df_test),readtype=readtype,
+                               num_workers=num_workers)
     train_loader = data_loading(df_train)
     val_loader   = data_loading(df_val)
     test_loader  = test_loading(df_test)
