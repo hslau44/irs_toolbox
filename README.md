@@ -26,10 +26,12 @@ For demonstration, please run the following commands in the project's root direc
 ├── callbacks // here you can create your custom callbacks
 ├── checkpoint // were we store the trained models
 ├── data // quick data import and transformation pipeline
-│ ├── raw_csi.py // old data loading pipeline, to be depreciated
-│ ├── spectrogram.py // current data loading pipeline
-│ ├── torchDataLoader.py // PyTorch DataLoader data loading pipeline, to be tested
-│ └── transformation // custom transformation, e.g. resize and data augmentation
+│ ├── selection // data selection for train-validation-test split
+│ ├── transformation // custom transformation, e.g. resize and data augmentation
+│ ├── torchData // custom torch Dataset and DataLoader
+│ ├── custom_data.py // data for specific format
+│ ├── load_npy_format.py // tranform and load csv files into npy files
+│ └── utils.py
 ├── laboratory // store the trained models and record
 ├── losses // custom losses
 ├── metrics // custom metrics
@@ -38,6 +40,7 @@ For demonstration, please run the following commands in the project's root direc
 │ ├── baseline.py // baseline models
 │ ├── cnn.py // torchvision models
 │ ├── self_supervised.py // torch.nn.module for contrastive learning
+│ ├── temproal.py //
 │ └── utils.py // utility torch.nn.module
 ├── playground.ipynb // fast experiment with things
 ├── contrastive_learning.ipynb // the notebook version of main.py
