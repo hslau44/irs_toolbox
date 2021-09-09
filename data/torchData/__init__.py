@@ -61,7 +61,7 @@ class DataLoading(object):
                                    transform=self.transform,
                                    readtype=self.readtype)
 
-        if self.load_data: train_obj = datasetobj.load_data()
+        if self.load_data: datasetobj = datasetobj.load_data()
 
         data_loader = DataLoader(datasetobj,batch_size=self.batch_size,**self.kwargs)
 
