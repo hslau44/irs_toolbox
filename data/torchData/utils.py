@@ -70,7 +70,7 @@ class DatasetObject(Dataset):
 
 class PairDataset(DatasetObject):
 
-    def __init__(self,filepaths,filepaths2,transform=None):
+    def __init__(self,filepaths,filepaths2,transform=None,readtype='npy'):
         """
         Customized PyTorch Dataset, currently only support csv files
 
@@ -82,7 +82,8 @@ class PairDataset(DatasetObject):
         """
         super().__init__(filepaths=filepaths,
                          label=None,
-                         transform=transform)
+                         transform=transform,
+                         readtype=readtype)
 
         self.filepaths2 = filepaths2
 
@@ -91,10 +92,13 @@ class PairDataset(DatasetObject):
 
     def __getitem__(self, idx):
         fp1 = self.filepaths[idx]
-        X1 = pd.read_csv(fp1,header=None).to_numpy()
-        fp2 = self.filepaths[idx]
-        X2 = pd.read_csv(fp2,header=None).to_numpy()
+        fp2 = self.filepaths2[idx]
+        X1 = read_file(fp1,self.readtype)
+        X2 = read_file(fp2,self.readtype)
         if self.transform:
             X1 = self.transform(X1)
             X2 = self.transform(X2)
+        if self.readtype == 'npy':
+            X1 = torch.from_numpy(X1).float()
+            X2 = torch.from_numpy(X2).float()
         return X1,X2
