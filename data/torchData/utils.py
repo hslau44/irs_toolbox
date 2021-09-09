@@ -46,8 +46,8 @@ class DatasetObject(Dataset):
         # transform
         if self.transform:
             X = self.transform(X)
-        if self.readtype == 'npy':
-            X = torch.from_numpy(X).float()
+        # if self.readtype == 'npy':
+        X = torch.from_numpy(X).float()
         # label
         if isinstance(self.label,np.ndarray):
             y = np.int64(self.label[idx])
@@ -98,7 +98,7 @@ class PairDataset(DatasetObject):
         if self.transform:
             X1 = self.transform(X1)
             X2 = self.transform(X2)
-        if self.readtype == 'npy':
-            X1 = torch.from_numpy(X1).float()
-            X2 = torch.from_numpy(X2).float()
+        # if self.readtype == 'npy':
+        X1 = torch.from_numpy(X1).float()
+        X2 = torch.from_numpy(X2).float()
         return X1,X2
