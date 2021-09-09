@@ -3,6 +3,19 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+
+def read_file(fp,readtype):
+    """
+    Return numpy.ndarray from fp by readtype: currently support 'csv' or 'npy'
+    """
+    if readtype == 'csv':
+        return pd.read_csv(fp,header=None).to_numpy()
+    elif readtype == 'npy':
+        return np.load(fp)
+    else:
+        raise Exception("currently only support 'csv' or 'npy'")
+
+
 class DatasetObject(Dataset):
 
     def __init__(self,filepaths,label=None,transform=None,readtype='npy'):
@@ -29,12 +42,7 @@ class DatasetObject(Dataset):
     def __getitem__(self, idx):
         # filepath
         fp = self.filepaths[idx]
-        if self.readtype == 'csv':
-            X = pd.read_csv(fp,header=None).to_numpy()
-        elif self.readtype == 'npy':
-            X = np.load(fp)
-        else:
-            raise Exception('')
+        X = read_file(fp,self.readtype)
         # transform
         if self.transform:
             X = self.transform(X)
