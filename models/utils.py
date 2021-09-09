@@ -26,7 +26,7 @@ class Lambda(nn.Module):
     """transform tensor according to function func
 
     Argument:
-    func (function): the mathematical operation applying in a tensor, accept only one input tensor 
+    func (function): the mathematical operation applying in a tensor, accept only one input tensor
     """
     def __init__(self, func):
         super().__init__()
@@ -53,17 +53,36 @@ class ED_module(nn.Module):
 
 class Classifier(nn.Module):
     """
-    Linear Classifier (Double Layer)
-
-    Hint: user nn.Linear as Classifier (Single Layer)
+    Classifier with LeakyReLU and Dropout between the layers
     """
-    def __init__(self,input_shape,hidden_shape,output_shape):
+    def __init__(self,*num_neurons,**kwargs):
         super(Classifier, self).__init__()
-        self.linear1 = nn.Linear(input_shape,hidden_shape)
-        self.linear2 = nn.Linear(hidden_shape,output_shape)
+        assert len(num_neurons) > 1
+        self.bias = kwargs.get('bias',True)
+        self.dropout = kwargs.get('dropout',0.1)
+        self.last_activation = kwargs.get('last_activation',None)
+        self.num_neurons = num_neurons
+        self.model = None
+        self.build()
 
     def forward(self,X):
-        X = F.leaky_relu(self.linear1(X))
-        X = F.dropout(X,0.1)
-        X = self.linear2(X)
-        return X
+        return self.model(X)
+
+    def build(self):
+        layers = []
+        for i in range(len(self.num_neurons)-1):
+
+            layers.append(nn.Linear(in_features=self.num_neurons[i],
+                                    out_features=self.num_neurons[i+1],
+                                    bias=self.bias))
+
+            if i < len(self.num_neurons)-2:
+
+                layers.append(nn.LeakyReLU())
+                layers.append(nn.Dropout(p=self.dropout))
+
+        if self.last_activation:
+            layers.append(self.last_activation)
+
+        self.model = nn.Sequential(*layers)
+        return
