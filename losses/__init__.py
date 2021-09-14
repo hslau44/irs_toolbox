@@ -54,8 +54,8 @@ class NT_Xent(nn.Module):
         Argument
         tensors (torch.Tensor):
         """
-        assert tensors[0].shape[0] == self.batch_size,f'batch size not matching, expecting size: {self.batch_size}'
-        assert len(tensors) == self.num_repre,f'number of representation not matching, expecting size: {self.num_repre}'
+        assert tensors[0].shape[0] == self.batch_size,f'batch size not matching, expecting size: {self.batch_size}, get batch size {tensors[0].shape[0]}'
+        assert len(tensors) == self.num_repre,f'number of representation not matching, expecting size: {self.num_repre}, get {len(tensors)} '
         z = torch.cat(tensors, dim=0)
         s = self.cossim(z.unsqueeze(1),z.unsqueeze(0))/self.temperature
         positive_samples = s[self.positive_mask]
@@ -64,7 +64,7 @@ class NT_Xent(nn.Module):
         # print(f'positive shape {positive_samples.shape}')
         negative_samples = s[self.negative_mask]
         negative_samples = negative_samples.reshape(self.mtx_size,-1)
-        negative_samples = negative_samples.repeat(num_repe-1,1)
+        negative_samples = negative_samples.repeat(self.num_repre-1,1)
         # print(f'negative shape {negative_samples.shape}')
         logits = torch.cat((positive_samples, negative_samples), dim=1)
         labels = torch.zeros(logits.shape[0]).long().to(logits.device)
