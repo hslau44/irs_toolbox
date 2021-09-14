@@ -1,6 +1,6 @@
 import pandas as pd
 from torch.utils.data import DataLoader
-from data.torchData.utils import DatasetObject
+from data.torchData.utils import DatasetObject,PairDataset
 from data.transformation import *
 
 
@@ -66,6 +66,35 @@ class DataLoading(object):
         data_loader = DataLoader(datasetobj,batch_size=self.batch_size,**self.kwargs)
 
         return data_loader
+
+
+class PairDataLoading(object):
+    """
+    Under testing
+    """
+    def __init__(self,transform,batch_size,readtype='npy',load_data=False,**kwargs):
+        self.transform = transform
+        self.batch_size = batch_size
+        self.readtype = readtype
+        self.load_data = load_data
+        self.kwargs = kwargs
+
+    def __call__(self,df):
+        """
+        Under testing
+        """
+
+        datasetobj = PairDataset(filepaths=df['fullpath_x'].to_numpy(),
+                                   filepaths2=df['fullpath_y'].to_numpy(),
+                                   transform=self.transform,
+                                   readtype=self.readtype)
+
+        if self.load_data: datasetobj = datasetobj.load_data()
+
+        data_loader = DataLoader(datasetobj,batch_size=self.batch_size,**self.kwargs)
+
+        return data_loader
+
 
 class DataLoadings(object):
     """
