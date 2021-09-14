@@ -64,7 +64,7 @@ def nucPaired_fpDataframe(dataframe):
     Return:
     Merged dataset
     """
-    nuc1 = dataframe[dataframe['nuc'] == 'NUC1'].drop('nuc',axis=1)
+    nuc1 = dataframe[dataframe['nuc'] == 'NUC1']
 
     nuc2 = dataframe[dataframe['nuc'] == 'NUC2'][['key','fullpath']]
 
