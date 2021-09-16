@@ -72,22 +72,30 @@ class PairDataLoading(object):
     """
     Under testing
     """
-    def __init__(self,transform,batch_size,readtype='npy',load_data=False,**kwargs):
+    def __init__(self,transform,batch_size,readtype='npy',supervision=None,load_data=False,**kwargs):
         self.transform = transform
         self.batch_size = batch_size
         self.readtype = readtype
         self.load_data = load_data
+        self.supervision = supervision
+        # self.supervision = kwargs.get('supervision',None)
         self.kwargs = kwargs
 
     def __call__(self,df):
         """
         Under testing
         """
-
-        datasetobj = PairDataset(filepaths=df['fullpath_x'].to_numpy(),
-                                   filepaths2=df['fullpath_y'].to_numpy(),
-                                   transform=self.transform,
-                                   readtype=self.readtype)
+        if self.supervision:
+            datasetobj = PairDataset(filepaths=df['fullpath_x'].to_numpy(),
+                                       filepaths2=df['fullpath_y'].to_numpy(),
+                                       label=df['activity'].to_numpy(),
+                                       transform=self.transform,
+                                       readtype=self.readtype)
+        else:
+            datasetobj = PairDataset(filepaths=df['fullpath_x'].to_numpy(),
+                                       filepaths2=df['fullpath_y'].to_numpy(),
+                                       transform=self.transform,
+                                       readtype=self.readtype)
 
         if self.load_data: datasetobj = datasetobj.load_data()
 
