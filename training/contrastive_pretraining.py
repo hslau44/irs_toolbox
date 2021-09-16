@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from models.utils import Classifier
-from losses import NT_Xent
+from losses import NT_Xent,SupConLoss
 
 
 class Simclr(nn.Module):
@@ -42,9 +42,10 @@ class Contrastive_PreTraining(object):
     encoder_builder2 (func): callable function of the secondary encoder (torch.nn.Module)
     temperature (float): temperature of NT-Xent
     optimizer (func): callable function of optimizer (torch.optim.Optimizer)
+    supervision (bool): trained with label with Supervised Contrastive Learning (Tian 2020)
     """
 
-    def __init__(self,encoder_builder,batch_size,**kwargs):
+    def __init__(self,encoder_builder,batch_size,supervision=None,**kwargs):
         # model
         enc,size = encoder_builder()
         enc2,size2 = kwargs.get('encoder_builder2',encoder_builder)()
@@ -56,7 +57,12 @@ class Contrastive_PreTraining(object):
         # overall
         self.model = Simclr(enc,enc2,size,size2,**kwargs)
         self.optimizer = optim(list(self.model.parameters()), lr=lr)
-        self.criterion = NT_Xent(batch_size,num_repre=2,temperature=temperature)
+        self.supervision = supervision
+
+        if self.supervision:
+            self.criterion = SupConLoss(temperature=temperature,base_temperature=1)
+        else:
+            self.criterion = NT_Xent(batch_size,num_repre=2,temperature=temperature)
 
     def train(self,train_loader,epochs=250,verbose=True,rtn_history=True,device=None):
         """
@@ -81,19 +87,43 @@ class Contrastive_PreTraining(object):
             if verbose: print(f'Epoch {i+1} ',end='')
             for items in train_loader:
 
-                if device:
-                    X1,X2 = [i.to(device) for i in items]
+                # SupConLoss
+                if self.supervision:
 
-                self.optimizer.zero_grad()
-                X1,X2 = self.model(X1,X2)
-                loss = self.criterion(X1,X2)
-                loss.backward()
-                self.optimizer.step()
+                    if device:
+                        X1,X2,y = [i.to(device) for i in items]
 
-                X1 = X1.cpu()
-                X2 = X2.cpu()
-                del X1,X2
-                if verbose: print('>',end='')
+                    self.optimizer.zero_grad()
+                    X1,X2 = self.model(X1,X2)
+
+                    tensor = torch.cat([X1.unsqueeze(1),X2.unsqueeze(1)],dim=1)
+
+                    loss = self.criterion(tensor,labels=y)
+                    loss.backward()
+                    self.optimizer.step()
+
+                    X1 = X1.cpu()
+                    X2 = X2.cpu()
+                    y = y.cpu()
+                    del X1,X2,y
+                    if verbose: print('>',end='')
+
+                # NT_Xent
+                else:
+
+                    if device:
+                        X1,X2 = [i.to(device) for i in items]
+
+                    self.optimizer.zero_grad()
+                    X1,X2 = self.model(X1,X2)
+                    loss = self.criterion(X1,X2)
+                    loss.backward()
+                    self.optimizer.step()
+
+                    X1 = X1.cpu()
+                    X2 = X2.cpu()
+                    del X1,X2
+                    if verbose: print('>',end='')
 
             loss = loss.tolist()
             history['loss'].append(loss)
