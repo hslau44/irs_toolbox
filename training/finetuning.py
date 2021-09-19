@@ -13,21 +13,29 @@ class FineTuneCNN(nn.Module):
     def __init__(self,encoder_builder,model_path,n_classes,**kwargs):
         super(FineTuneCNN, self).__init__()
         # parameters
-        hidden_layer = kwargs.get('hidden_layer',128)
+        self.encoder_builder = encoder_builder
+        self.model_path = model_path
+        self.n_classes = n_classes
+        self.hidden_layer = kwargs.get('hidden_layer',128)
+        self.encoder = None
+        self.decoder = None
         # build and load model
-        encoder,in_size = encoder_builder()
-        if model_path: 
-            encoder.load_state_dict(torch.load(model_path))
-            encoder = freeze_network(encoder)
-        if hidden_layer:
-            decoder = Classifier(in_size,hidden_layer,n_classes)
-        else:
-            decoder = Classifier(in_size,n_classes)
-        # overall
-        self.encoder = encoder
-        self.decoder = decoder
+        self.build()
 
     def forward(self,X):
         X = self.encoder(X)
         X = self.decoder(X)
         return X
+
+    def build(self):
+        encoder,in_size = self.encoder_builder()
+        if self.model_path:
+            encoder.load_state_dict(torch.load(self.model_path))
+            encoder = freeze_network(encoder)
+        if self.hidden_layer:
+            decoder = Classifier(in_size,self.hidden_layer,self.n_classes)
+        else:
+            decoder = Classifier(in_size,self.n_classes)
+        self.encoder = encoder
+        self.decoder = decoder
+        return
