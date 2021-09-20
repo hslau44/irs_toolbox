@@ -59,10 +59,10 @@ class Contrastive_PreTraining(object):
         self.optimizer = optim(list(self.model.parameters()), lr=lr)
         self.supervision = supervision
 
-        if self.supervision:
-            self.criterion = SupConLoss(temperature=temperature,base_temperature=1)
-        else:
-            self.criterion = NT_Xent(batch_size,num_repre=2,temperature=temperature)
+        # if self.supervision:
+        self.criterion = SupConLoss(temperature=temperature,base_temperature=1)
+        # else:
+            # self.criterion = NT_Xent(batch_size,num_repre=2,temperature=temperature)
 
     def train(self,train_loader,epochs=250,verbose=True,rtn_history=True,device=None):
         """
@@ -87,43 +87,27 @@ class Contrastive_PreTraining(object):
             if verbose: print(f'Epoch {i+1} ',end='')
             for items in train_loader:
 
+                if device:
+                    X1,X2,y = [i.to(device) for i in items]
+
+                self.optimizer.zero_grad()
+                X1,X2 = self.model(X1,X2)
+                tensor = torch.cat([X1.unsqueeze(1),X2.unsqueeze(1)],dim=1)
+
                 # SupConLoss
                 if self.supervision:
-
-                    if device:
-                        X1,X2,y = [i.to(device) for i in items]
-
-                    self.optimizer.zero_grad()
-                    X1,X2 = self.model(X1,X2)
-
-                    tensor = torch.cat([X1.unsqueeze(1),X2.unsqueeze(1)],dim=1)
-
                     loss = self.criterion(tensor,labels=y)
-                    loss.backward()
-                    self.optimizer.step()
-
-                    X1 = X1.cpu()
-                    X2 = X2.cpu()
-                    y = y.cpu()
-                    del X1,X2,y
-                    if verbose: print('>',end='')
-
                 # NT_Xent
                 else:
+                    loss = self.criterion(tensor)
+                loss.backward()
+                self.optimizer.step()
 
-                    if device:
-                        X1,X2 = [i.to(device) for i in items]
-
-                    self.optimizer.zero_grad()
-                    X1,X2 = self.model(X1,X2)
-                    loss = self.criterion(X1,X2)
-                    loss.backward()
-                    self.optimizer.step()
-
-                    X1 = X1.cpu()
-                    X2 = X2.cpu()
-                    del X1,X2
-                    if verbose: print('>',end='')
+                X1 = X1.cpu()
+                X2 = X2.cpu()
+                y = y.cpu()
+                del X1,X2,y
+                if verbose: print('>',end='')
 
             loss = loss.tolist()
             history['loss'].append(loss)
