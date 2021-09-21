@@ -55,7 +55,6 @@ def leaveOneOut_crossValidation(model,dataframe,transform,verbose=True,**kwargs)
     device = kwargs.get('device',DEVICE)
     optimizer = kwargs.get('optimizer',OPTIMIZER)
     loss = kwargs.get('loss',LOSS)
-    metrics = kwargs.get('metrics',METRICS)
     epochs = kwargs.get('epochs',EPOCHS)
     batch_metrics = kwargs.get('batch_metrics',BATCH_METRICS)
     epoch_metrics = kwargs.get('epoch_metrics',EPOCH_METRICS)
@@ -76,10 +75,10 @@ def leaveOneOut_crossValidation(model,dataframe,transform,verbose=True,**kwargs)
                         batch_metrics=batch_metrics,epoch_metrics=epoch_metrics).to(device)
             history = mdl.fit_generator(train_loader, test_loader, epochs=EPOCHS)
             append_record(history,records)
+            if verbose: print(records[-1],'\n')
 
         except:
             print(f'Skip {test_sub}')
             continue
 
-    average_scores = pd.DataFrame(records).mean()
-    return average_scores
+    return pd.DataFrame(records)
