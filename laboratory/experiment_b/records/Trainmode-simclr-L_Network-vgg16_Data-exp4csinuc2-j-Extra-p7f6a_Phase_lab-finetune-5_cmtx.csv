@@ -1,7 +1,0 @@
-,predict : lay,predict : pickup,predict : sit,predict : stand,predict : walk,predict : waving
-actual: lay,9,8,1,0,0,0
-actual: pickup,2,14,13,15,0,0
-actual: sit,2,4,15,11,0,0
-actual: stand,0,1,14,15,0,0
-actual: walk,4,3,0,0,65,28
-actual: waving,1,4,0,0,30,31
