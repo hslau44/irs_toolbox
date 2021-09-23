@@ -147,3 +147,10 @@ def Transform_CnnS():
     for resolution-reduced CNN
     """
     return T.Compose([ReduceRes(),Unsqueeze()])
+
+def Transform_Cnn():
+    """
+    Torch Transformation (torchvision.transforms.transforms.Compose)
+    for resolution-reduced CNN
+    """
+    return T.Compose([Unsqueeze()])
