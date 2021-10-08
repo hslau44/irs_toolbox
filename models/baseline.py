@@ -140,6 +140,72 @@ class SimpleCNN(nn.Module):
         X = self.linear3(X)
         return X
 
+class ConvNet1D4L(nn.Module):
+    """
+    1D Convolutional Neural Network, 4 Blocks construction
+
+    Each Block consists: conv(l,k,s) -> batchnorm -> relu -> conv(l,k,s) -> relu
+    where l,k,s are number of neurons, kernal size and stride respectively
+
+
+    """
+    def __init__(self,in_channels=70,**kwargs):
+        """
+        Args:
+        in_channels (int) - input channel
+        layers (list<int>) - number of neurons on each conv layer, length must be equal to 3
+        kernel_sizes (list<int>) - kernel_size on each conv layer, length must be equal to 3
+        strides (list<int>) - stride on on each conv layer, length must be equal to 3
+        """
+        super(ConvNet1D4L, self).__init__()
+        # parameters
+        layers = kwargs.get('layers',[128,256,512,1024])
+        kernel_sizes = kwargs.get('kernel_sizes',[128,32,8,2])
+        strides = kwargs.get('strides',[4,4,2,2])
+        assert len(layers) == len(kernel_sizes) == len(strides)
+        l0 = in_channels
+        l1,l2,l3,l4 = layers
+        k1,k2,k3,k4 = kernel_sizes
+        s1,s2,s3,s4 = strides
+        self.conv1 = nn.Conv1d(in_channels=l0,out_channels=l1,kernel_size=k1,stride=s1)
+        self.conv2 = nn.MaxPool1d(kernel_size=k1,stride=s1)
+        self.conv3 = nn.Conv1d(in_channels=l1,out_channels=l2,kernel_size=k2,stride=s2)
+        self.conv4 = nn.MaxPool1d(kernel_size=k2,stride=s2)
+        self.conv5 = nn.Conv1d(in_channels=l2,out_channels=l3,kernel_size=k3,stride=s3)
+        self.conv6 = nn.MaxPool1d(kernel_size=k3,stride=s3)
+        self.conv7 = nn.Conv1d(in_channels=l3,out_channels=l4,kernel_size=k4,stride=s4)
+        self.conv8 = nn.MaxPool1d(kernel_size=k4,stride=s4)
+        self.norm1 = nn.BatchNorm1d(l1,affine=False)
+        self.norm3 = nn.BatchNorm1d(l2,affine=False)
+        self.norm5 = nn.BatchNorm1d(l3,affine=False)
+        self.norm7 = nn.BatchNorm1d(l4,affine=False)
+        self.flatten = nn.Flatten()
+
+    def forward(self,X):
+        X = self.conv1(X)
+        X = self.norm1(X)
+        X = nn.functional.relu(X)
+        X = self.conv2(X)
+        X = nn.functional.relu(X)
+        X = self.conv3(X)
+        X = self.norm3(X)
+        X = nn.functional.relu(X)
+        # X = self.conv4(X)
+        # X = nn.functional.relu(X)
+        X = self.conv5(X)
+        X = self.norm5(X)
+        X = nn.functional.relu(X)
+        X = self.conv6(X)
+        X = nn.functional.relu(X)
+        X = self.conv7(X)
+        X = self.norm7(X)
+        X = nn.functional.relu(X)
+        # X = self.conv8(X)
+        # X = nn.functional.relu(X)
+        X = self.flatten(X)
+        return X
+
+
 class ConvNet1D(nn.Module):
     """
     1D Convolutional Neural Network, 3 Blocks construction
@@ -162,28 +228,37 @@ class ConvNet1D(nn.Module):
         layers = kwargs.get('layers',[128,256,512])
         kernel_sizes = kwargs.get('kernel_sizes',[64,16,4])
         strides = kwargs.get('strides',[4,4,4])
-        assert len(layers) == len(kernel_sizes) == len(strides) == 3
+        assert len(layers) == len(kernel_sizes) == len(strides)
         l0 = in_channels
         l1,l2,l3 = layers
         k1,k2,k3 = kernel_sizes
         s1,s2,s3 = strides
         self.conv1 = nn.Conv1d(in_channels=l0,out_channels=l1,kernel_size=k1,stride=s1)
-        self.conv2 = nn.Conv1d(in_channels=l1,out_channels=l1,kernel_size=k1,stride=s1)
+        self.conv2 = nn.MaxPool1d(kernel_size=k1,stride=s1)
         self.conv3 = nn.Conv1d(in_channels=l1,out_channels=l2,kernel_size=k2,stride=s2)
-        self.conv4 = nn.Conv1d(in_channels=l2,out_channels=l2,kernel_size=k2,stride=s2)
+        self.conv4 = nn.MaxPool1d(kernel_size=k2,stride=s2)
         self.conv5 = nn.Conv1d(in_channels=l2,out_channels=l3,kernel_size=k3,stride=s3)
-        self.conv6 = nn.Conv1d(in_channels=l3,out_channels=l3,kernel_size=k3,stride=s3)
+        self.conv6 = nn.MaxPool1d(kernel_size=k3,stride=s3)
         self.norm1 = nn.BatchNorm1d(l1,affine=False)
-        self.norm2 = nn.BatchNorm1d(l2,affine=False)
-        self.norm3 = nn.BatchNorm1d(l3,affine=False)
+        self.norm3 = nn.BatchNorm1d(l2,affine=False)
+        self.norm5 = nn.BatchNorm1d(l3,affine=False)
         self.flatten = nn.Flatten()
 
     def forward(self,X):
-        X = nn.functional.relu(self.norm1(self.conv1(X)))
-        X = nn.functional.relu(self.conv2(X))
-        X = nn.functional.relu(self.norm2(self.conv3(X)))
-        X = nn.functional.relu(self.conv4(X))
-        X = nn.functional.relu(self.norm3(self.conv5(X)))
-        X = nn.functional.relu(self.conv6(X))
+        X = self.conv1(X)
+        X = self.norm1(X)
+        X = nn.functional.relu(X)
+        # X = self.conv2(X)
+        # X = nn.functional.relu(X)
+        X = self.conv3(X)
+        X = self.norm3(X)
+        X = nn.functional.relu(X)
+        # X = self.conv4(X)
+        # X = nn.functional.relu(X)
+        X = self.conv5(X)
+        X = self.norm5(X)
+        X = nn.functional.relu(X)
+        # X = self.conv6(X)
+        # X = nn.functional.relu(X)
         X = self.flatten(X)
         return X
