@@ -136,6 +136,6 @@ dmypy.json
 #
 record/
 laboratory/saved_model
-laboratory/record
+laboratory/records
 laboratory/session_1.zip
 playground.ipynb
