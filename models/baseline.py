@@ -175,6 +175,7 @@ class ConvNet1D4L(nn.Module):
         self.conv6 = nn.MaxPool1d(kernel_size=k3,stride=s3)
         self.conv7 = nn.Conv1d(in_channels=l3,out_channels=l4,kernel_size=k4,stride=s4)
         self.conv8 = nn.MaxPool1d(kernel_size=k4,stride=s4)
+        self.norm0 = nn.BatchNorm1d(l0,affine=False)
         self.norm1 = nn.BatchNorm1d(l1,affine=False)
         self.norm3 = nn.BatchNorm1d(l2,affine=False)
         self.norm5 = nn.BatchNorm1d(l3,affine=False)
@@ -182,6 +183,7 @@ class ConvNet1D4L(nn.Module):
         self.flatten = nn.Flatten()
 
     def forward(self,X):
+        X = self.norm0(X)
         X = self.conv1(X)
         X = self.norm1(X)
         X = nn.functional.relu(X)
@@ -239,12 +241,14 @@ class ConvNet1D(nn.Module):
         self.conv4 = nn.MaxPool1d(kernel_size=k2,stride=s2)
         self.conv5 = nn.Conv1d(in_channels=l2,out_channels=l3,kernel_size=k3,stride=s3)
         self.conv6 = nn.MaxPool1d(kernel_size=k3,stride=s3)
+        self.norm0 = nn.BatchNorm1d(l0,affine=False)
         self.norm1 = nn.BatchNorm1d(l1,affine=False)
         self.norm3 = nn.BatchNorm1d(l2,affine=False)
         self.norm5 = nn.BatchNorm1d(l3,affine=False)
         self.flatten = nn.Flatten()
 
     def forward(self,X):
+        X = self.norm0(X)
         X = self.conv1(X)
         X = self.norm1(X)
         X = nn.functional.relu(X)
