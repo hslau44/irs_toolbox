@@ -8,7 +8,8 @@ class Transform(object):
     Custom Transform
 
     Level 1: ReduceRes(),CutFrame()
-    Level 2: Unsqueeze(),UnsqueezebyRearrange(),StackChannel()
+    Level 2: Unsqueeze(),UnsqueezebyRearrange()
+    Level 3: StackChannel()
     Level 3: ToStackImg()
     """
 
@@ -97,7 +98,6 @@ class StackChannel(Transform):
         self.dim = dim
 
     def __call__(self, X):
-        assert len(X.shape) == 3 and X.shape[0] == 1, f'torchsize must be (1,w,l), current size: {X.shape}'
         return np.concatenate([X for _ in range(self.stack)],axis=self.dim)
 
 class UnsqueezebyRearrange(Transform):
