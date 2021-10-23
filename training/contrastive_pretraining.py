@@ -7,7 +7,22 @@ from losses import NT_Xent,SupConLoss
 
 class Simclr(nn.Module):
     """
-    Under testing
+    SimCLR training module, build projection network on top of each encoder
+
+    Args:
+        enc (nn.Module): first encoder
+        enc2 (nn.Module): second encoder
+        size (int): latent size for the first network
+        size2 (int): latent size for the second network
+    kwargs:
+        projection_dim (int): OPTIONAL, hidden and output dimension of the projection networks
+        projection_depth (int): OPTIONAL, number of layers of the projection networks
+
+    Attributes:
+        encoder (nn.Module): first encoder
+        encoder2 (nn.Module): second encoder
+        decoder (nn.Module): decoder of the first encoder
+        decoder2 (nn.Module): decoder of the second encoder
     """
 
     def __init__(self,enc,enc2,size,size2,**kwargs):
@@ -35,14 +50,17 @@ class Simclr(nn.Module):
 class Contrastive_PreTraining(object):
     """
     Args:
-    encoder_builder (func): callable function of the primary encoder (torch.nn.Module)
-    batch_size (int): batch size
+        encoder_builder (func): callable function of the primary encoder and its latent size (tuple <nn.Module, int>)
+        batch_size (int): batch size
+        supervision (bool): option for training with label with Supervised Contrastive Learning (Tian 2020)
 
     kwargs:
-    encoder_builder2 (func): callable function of the secondary encoder (torch.nn.Module)
-    temperature (float): temperature of NT-Xent
-    optimizer (func): callable function of optimizer (torch.optim.Optimizer)
-    supervision (bool): trained with label with Supervised Contrastive Learning (Tian 2020)
+        encoder_builder2 (func): callable function of the secondary encoder (torch.nn.Module)
+        temperature (float): temperature of NT-Xent
+        optimizer (func): callable function of optimizer (torch.optim.Optimizer)
+
+    Attributes:
+
     """
 
     def __init__(self,encoder_builder,batch_size,supervision=None,**kwargs):

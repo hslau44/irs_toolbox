@@ -9,7 +9,19 @@ def freeze_network(model):
     return model
 
 class FineTuneCNN(nn.Module):
+    """
+    Encoder Decoder Architecture, build encoder and add MLP
 
+    Args:
+        encoder_builder (func): callable function of the primary encoder and its latent size (tuple <nn.Module, int>)
+        model_path (str): Optional, load path model's state dict to the encoder, must be consistent with encoder_builder.
+        n_classes (int): number of classes / output size
+    kwargs:
+        hidden_layer (int/bool): hidden layer of the mlp. If None, mlp become Linear Classifier
+
+    Method:
+        build: build/reset the model
+    """
     def __init__(self,encoder_builder,model_path,n_classes,**kwargs):
         super(FineTuneCNN, self).__init__()
         # parameters
