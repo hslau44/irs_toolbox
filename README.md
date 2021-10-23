@@ -12,13 +12,20 @@ Wi-Fi-based Activity Recognition mainly consists of three stages: Data collectio
 In the current stage, we treat the signal classification as a computer vision task, i.e., treating signal as image, and use Convolutional Neural Network. With only 3 convolutional layers and less than 400,000 parameters, the network can work reasonably well with the raw data. But Even with the learning power of Deep Learning, there are several challenges, such as the high demand for labelled samples to train the network, and we still need more work to improve the model performance under complex environments in order to make it viable for real-world scenario. The goal of this project is to tackle these two problems with a popular technique in computer vision called self-supervised contrastive learning.
 
 ## Instruction
-The repository is intended to works as a package, which includes the data processing, ETL pipeline, CNN models and loss function. We reduce certain functions from the template for simplicity.
 
-For demonstration, please run the following commands in the project's root directory, or run the jupyter notebook `contrastive learning.ipynb` `./main.py {trainmode}{network}{pairing}{t}`
-- `trainmode`: for standard non-pretrained training, type `normal`; for contrastive pretraining, type `simclr`.
-- `network`: four network architectures are available, shallow three layer CNN model `shallow`, AlexNet (Krizhevsky et al. 2017) `alexnet`, ResNet18 (He et al. 2015) `resnet` and VGG16 (Simonyan 2014) `vgg16`.
-- `pairing`: self supervised contrastive learning uses a pair of representation of the sample which has same contextual meaning, in the experiment, we use either CSI collected from different view `nuc2` or Passivie Wi-Fi Radar `pwr` along with the main CSI.
-- `t`: we use Normalized temperature cross Entropy (NT-Xent) to calculate the contrastive loss, temperature is to control the smoothness, the available value are 0.1 `L`, 0.5 `M`, and 1.0 `H`.
+Due to the increase size of data, instead of loading all data into the memory, it loads data with following process:
+
+1. extract all filepaths into a dataframe using `data.utils.filepath_dataframe`
+2. split the dataframe into multiple dataframes with `data.selection.Selection`
+3. create corresponding dataloaders with `data.torchData.DataLoading`
+
+For instruction, please run the notebook `demo.ipynb`
+
+Three notebook are available in laboratory:
+- `Standard.ipynb`: Normal Supervised Learning
+- `CrossValidation.ipynb`: Cross Validation
+- `Contrastive_Learning.ipynb`: Contrastive Learning NT-Xent (Chen et al. 2020) with fine tuning
+
 
 ## Structure
 ```
