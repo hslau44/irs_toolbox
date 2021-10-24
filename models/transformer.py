@@ -161,6 +161,7 @@ class Block(nn.Module):
 class VisionTransformer(nn.Module):
     """
     Pytorch implementation of Vision Transformer (Dosovitskiy 2020)
+    return size: 512
 
     Args:
         img_size (tuple<int,int>) - size of images
@@ -206,7 +207,7 @@ class VisionTransformer(nn.Module):
             ]
         )
         self.norm = nn.LayerNorm(embed_dim,eps=1e-6)
-        self.head = nn.Linear(embed_dim,n_classes)
+        # self.head = nn.Linear(embed_dim,n_classes)
 
     def forward(self,X):
         n_samples = X.shape[0]
@@ -221,6 +222,6 @@ class VisionTransformer(nn.Module):
 
         X = self.norm(X)
         X = X[:,0]
-        X = self.head(X)
+        # X = self.head(X)
 
         return X
