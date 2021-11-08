@@ -8,3 +8,5 @@ torchvision
 torch
 torchsummary
 tensorboard
+transformers
+dataset
