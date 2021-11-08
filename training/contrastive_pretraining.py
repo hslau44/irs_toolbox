@@ -96,7 +96,7 @@ class Contrastive_PreTraining(object):
         Return
         """
         history = {'loss':[]}
-        torch.optim.Optimizer
+
         if device:
             self.model = self.model.to(device)
             self.criterion = self.criterion.to(device)
