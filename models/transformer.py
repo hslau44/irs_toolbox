@@ -424,7 +424,7 @@ class TransformerDecoder(nn.Module):
         norm (nn.Module)
         head (nn.Module)
     """
-    def __init__(self,seq_len,embed_dim=512,depth=4,n_heads=16,qkv_bias=False,attn_p=0.0,p=0.0,mlp_ratio=4.0):
+    def __init__(self,seq_len,embed_dim=512,depth=4,n_heads=16,qkv_bias=False,attn_p=0.0,p=0.0,mlp_ratio=4.0,end=True):
         super().__init__()
 
         self.cls_token = nn.Parameter(
@@ -444,6 +444,7 @@ class TransformerDecoder(nn.Module):
             ]
         )
         self.norm = nn.LayerNorm(embed_dim,eps=1e-6)
+        self.end = end
 
     def forward(self,X,S):
         n_samples = X.shape[0]
@@ -456,7 +457,9 @@ class TransformerDecoder(nn.Module):
             X = block(X,S)
 
         X = self.norm(X)
-        X = X[:,0]
+
+        if self.end:
+            X = X[:,0]
 
         return X
 
@@ -485,7 +488,8 @@ class EncoderDecoderTransformer(nn.Module):
             qkv_bias,
             attn_p,
             p,
-            mlp_ratio
+            mlp_ratio,
+            end = False
         )
 
     def forward(self,S,T):
