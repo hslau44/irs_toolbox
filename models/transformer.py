@@ -495,3 +495,14 @@ class EncoderDecoderTransformer(nn.Module):
     def forward(self,S,T):
         S = self.decoder(T, self.encoder(S))
         return self.decoder(T, self.encoder(S))
+
+
+class TransformerWrapper(nn.Module):
+
+    def __init__(self,embed,transformer):
+        super().__init__()
+        self.embed = embed
+        self.transformer = transformer
+
+    def forward(self,X):
+        return self.transformer(self.embed(X))
