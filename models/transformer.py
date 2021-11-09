@@ -276,7 +276,8 @@ class AttentionST(nn.Module):
         q,k,_ = qkv_s[0],qkv_s[1],qkv_s[2] # (n_sample,n_heads,n_patch,head_dim)
         k_t = k.transpose(-2,-1)
 
-        dp = (q @ k_t)*self.scale # (n_sample,n_heads,n_patch,n_patch)
+        dp = q @ k_t
+        dp = (self.generate_causal_mask(dp) + dp)*self.scale # (n_sample,n_heads,n_patch,n_patch)
         attn = dp.softmax(dim=-1)
         attn = self.attn_drop(attn)
         weighted_avg = attn @ v # (n_sample,n_heads,n_patch,head_dim)
@@ -285,6 +286,15 @@ class AttentionST(nn.Module):
         X = self.proj(weighted_avg)
         X = self.proj_drop(X)
         return X
+
+    def generate_causal_mask(self,mat,cls_token=True):
+        assert len(mat.shape) == 3
+        assert mat.shape[1] == mat.shape[2]
+        mask = torch.log(torch.tril(torch.ones_like(mat)))
+        if cls_token:
+            mask[:,0,:] = 0
+            mask[:,:,0] = 0
+        return mask
 
 class DecoderBlock(nn.Module):
     """
