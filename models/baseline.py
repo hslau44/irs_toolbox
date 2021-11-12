@@ -266,3 +266,52 @@ class ConvNet1D(nn.Module):
         # X = nn.functional.relu(X)
         X = self.flatten(X)
         return X
+
+class Conv1DEmbed(nn.Module):
+    """
+    1D Convolutional Neural Network, return tensor with size: batch_size,seq_len,embed_size
+
+    Each Block consists: conv(l,k,s) -> batchnorm -> relu -> conv(l,k,s) -> relu
+    where l,k,s are number of neurons, kernal size and stride respectively
+
+
+    """
+    def __init__(self,in_channels=70,pooling_size=100,**kwargs):
+        """
+        Args:
+        in_channels (int) - input channel
+        pooling_size (int) - size of the last dimension
+        layers (list<int>) - number of neurons on each conv layer, length must be equal to 3
+        kernel_sizes (list<int>) - kernel_size on each conv layer, length must be equal to 3
+        strides (list<int>) - stride on on each conv layer, length must be equal to 3
+        """
+        super().__init__()
+        # parameters
+        layers = kwargs.get('layers',[128,256,512,1024])
+        kernel_sizes = kwargs.get('kernel_sizes',[32,16,8,4])
+        strides = kwargs.get('strides',[4,4,2,2])
+        assert len(layers) == len(kernel_sizes) == len(strides)
+        l0 = in_channels
+        l1,l2,l3,l4 = layers
+        k1,k2,k3,k4 = kernel_sizes
+        s1,s2,s3,s4 = strides
+        self.conv1 = nn.Conv1d(in_channels=l0,out_channels=l1,kernel_size=k1,stride=s1)
+        self.conv2 = nn.Conv1d(in_channels=l1,out_channels=l2,kernel_size=k2,stride=s2)
+        self.conv3 = nn.Conv1d(in_channels=l2,out_channels=l3,kernel_size=k3,stride=s3)
+        self.conv4 = nn.Conv1d(in_channels=l3,out_channels=l4,kernel_size=k4,stride=s4)
+        self.norm0 = nn.InstanceNorm1d(l0) # LayerNorm(6400,eps=1e-6)
+        self.norm1 = nn.InstanceNorm1d(l1)
+        self.norm2 = nn.InstanceNorm1d(l2)
+        self.norm3 = nn.InstanceNorm1d(l3)
+        self.norm4 = nn.InstanceNorm1d(l4)
+        self.pool1 = nn.AdaptiveAvgPool1d(pooling_size)
+
+
+    def forward(self,X):
+        X = self.norm0(X)
+        X = self.norm1(nn.functional.relu(self.conv1(X)))
+        X = self.norm2(nn.functional.relu(self.conv2(X)))
+        X = self.norm3(nn.functional.relu(self.conv3(X)))
+        X = self.norm4(nn.functional.relu(self.conv4(X)))
+        X = self.pool1(X)
+        return X.transpose(2,1)
