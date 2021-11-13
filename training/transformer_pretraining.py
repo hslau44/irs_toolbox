@@ -1,11 +1,11 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from models.Transformer import *
+from models.transformer import *
 
 class PreTraining(object):
 
-    def __init__(encoder_builder,seq_len,embed_dim,depth,n_heads,qkv_bias=False,attn_p=0.0,p=0.0,mlp_ratio=4.0,**kwargs):
+    def __init__(self,encoder_builder,seq_len,embed_dim,depth,n_heads,qkv_bias=False,attn_p=0.0,p=0.0,mlp_ratio=4.0,**kwargs):
         self.source_encoder =  encoder_builder()
         self.target_encoder =  kwargs.get('encoder_builder2',encoder_builder)()
         self.st_transformer = EncoderDecoderTransformer(
@@ -33,7 +33,9 @@ class PreTraining(object):
         history = {'loss':[]}
 
         if device:
-            self.model = self.model.to(device)
+            self.source_encoder = self.source_encoder.to(device)
+            self.target_encoder = self.target_encoder.to(device)
+            self.st_transformer = self.st_transformer.to(device)
             self.criterion = self.criterion.to(device)
 
         for i in range(epochs):
@@ -46,9 +48,9 @@ class PreTraining(object):
 
                 X1 = self.source_encoder(X1)
                 X2 = self.target_encoder(X2)
-                targets = X2[:,2:].detach()
+                targets = X2[:,1:].detach()
 
-                outputs = self.model(X1,X2)
+                outputs = self.st_transformer(X1,X2)
                 outputs = outputs[:,1:-1]
 
                 loss = self.criterion(outputs,targets)
@@ -66,7 +68,9 @@ class PreTraining(object):
             if verbose: print(f' loss: {loss}')
 
         if device:
-            self.model = self.model.cpu()
+            self.source_encoder = self.source_encoder.cpu()
+            self.target_encoder = self.target_encoder.cpu()
+            self.st_transformer = self.st_transformer.cpu()
             self.criterion = self.criterion.cpu()
 
         if rtn_history:
