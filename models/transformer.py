@@ -288,12 +288,12 @@ class AttentionST(nn.Module):
         return X
 
     def generate_causal_mask(self,mat,cls_token=True):
-        assert len(mat.shape) == 3
-        assert mat.shape[1] == mat.shape[2]
+        assert len(mat.shape) == 4, f"shape: {mat.shape}"
+        assert mat.shape[-2] == mat.shape[-1]
         mask = torch.log(torch.tril(torch.ones_like(mat)))
         if cls_token:
-            mask[:,0,:] = 0
-            mask[:,:,0] = 0
+            mask[:,:,0,:] = 0
+            mask[:,:,:,0] = 0
         return mask
 
 class DecoderBlock(nn.Module):
@@ -446,7 +446,7 @@ class TransformerDecoder(nn.Module):
         self.pos_drop = nn.Dropout(p=p)
         self.blocks = nn.ModuleList(
             [
-                DBlock(
+                DecoderBlock(
                 dim=embed_dim,
                 n_heads=n_heads,mlp_ratio=mlp_ratio,qkv_bias=qkv_bias,p=p,attn_p=attn_p
                 )
@@ -503,7 +503,6 @@ class EncoderDecoderTransformer(nn.Module):
         )
 
     def forward(self,S,T):
-        S = self.decoder(T, self.encoder(S))
         return self.decoder(T, self.encoder(S))
 
 
