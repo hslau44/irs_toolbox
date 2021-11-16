@@ -192,7 +192,7 @@ class JSD(nn.Module):
 
         m = 0.5 * (net_1_probs + net_1_probs)
         loss = 0.0
-        loss += F.kl_div(F.log_softmax(net_1_logits, dim=1), total_m, reduction="batchmean")
-        loss += F.kl_div(F.log_softmax(net_2_logits, dim=1), total_m, reduction="batchmean")
+        loss += F.kl_div(F.log_softmax(net_1_logits, dim=1), m, reduction="batchmean")
+        loss += F.kl_div(F.log_softmax(net_2_logits, dim=1), m, reduction="batchmean")
 
         return (0.5 * loss)
