@@ -18,6 +18,7 @@ class FineTuneCNN(nn.Module):
         n_classes (int): number of classes / output size
     kwargs:
         hidden_layer (int/bool): hidden layer of the mlp. If None, mlp become Linear Classifier
+        freeze_encoder (int/bool): freeze the encoder, default value True
 
     Method:
         build: build/reset the model
@@ -31,6 +32,7 @@ class FineTuneCNN(nn.Module):
         self.hidden_layer = kwargs.get('hidden_layer',128)
         self.encoder = None
         self.decoder = None
+        self.freeze_encoder = kwargs.get('freeze_encoder',True)
         # build and load model
         self.build()
 
@@ -43,7 +45,8 @@ class FineTuneCNN(nn.Module):
         encoder,in_size = self.encoder_builder()
         if self.model_path:
             encoder.load_state_dict(torch.load(self.model_path))
-            encoder = freeze_network(encoder)
+            if self.freeze_encoder:
+                encoder = freeze_network(encoder)
         if self.hidden_layer:
             decoder = Classifier(in_size,self.hidden_layer,self.n_classes)
         else:
