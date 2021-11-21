@@ -45,8 +45,8 @@ class FineTuneCNN(nn.Module):
         encoder,in_size = self.encoder_builder()
         if self.model_path:
             encoder.load_state_dict(torch.load(self.model_path))
-            if self.freeze_encoder:
-                encoder = freeze_network(encoder)
+        if self.freeze_encoder:
+            encoder = freeze_network(encoder)
         if self.hidden_layer:
             decoder = Classifier(in_size,self.hidden_layer,self.n_classes)
         else:
