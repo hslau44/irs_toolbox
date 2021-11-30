@@ -86,9 +86,9 @@ class PreTraining(object):
 
 class Wav2VecPreTraining(object):
 
-    def __init__(module,optim=torch.optim.Adam,learning_rate=0.0001, mask_prob=0.2, mask_length=4, num_negatives=4):
+    def __init__(self,module,optim=torch.optim.Adam,learning_rate=0.0001, mask_prob=0.2, mask_length=4, num_negatives=4):
         self.module = module
-        self.optimizer = optim(list(self.module.parameters()),lr=lr)
+        self.optimizer = optim(self.module.parameters(),lr=learning_rate)
         self.mask_prob = mask_prob
         self.mask_length = mask_length
         self.num_negatives = num_negatives
@@ -112,10 +112,13 @@ class Wav2VecPreTraining(object):
                 loss = self.training_step(self.module,items)
 
                 loss.backward()
+                
                 self.optimizer.step()
-
-                items = items.cpu()
-                del items
+                
+                if device:
+                    items = items.cpu()
+                    del items
+                    
                 if verbose: print('>',end='')
 
             loss = loss.tolist()
@@ -140,7 +143,7 @@ class Wav2VecPreTraining(object):
         sampled_negative_indices = torch.Tensor(sampled_negative_indices)
 
         model.train()
-        outputs = model(input_values, mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices)
+        outputs = model(input_values[0], mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices)
         return outputs.loss
 
     def save(self,fname):
