@@ -107,3 +107,26 @@ class PairDataset(DatasetObject):
             return X1,X2,y
         else:
             return X1,X2
+
+class TransformersDataset(DatasetObject):
+
+    def __init__(self,filepaths,label=None,transform=None,readtype='npy'):
+        super().__init__(filepaths=filepaths,
+                         label=label,
+                         transform=transform,
+                         readtype=readtype)
+
+    def __getitem__(self, idx):
+        items = super().__getitem__(idx)
+        dic = {}
+        if isinstance(self.label,np.ndarray):
+            X,y = items
+            dic['input_values'] = X
+            dic['label'] = y
+        else:
+            X = items
+            dic['input_values'] = X
+        return dic
+
+    def load_data(self):
+        return None

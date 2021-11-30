@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from models.transformer import *
+from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
 class PreTraining(object):
 
@@ -82,3 +83,66 @@ class PreTraining(object):
         transformer = self.st_transformer.encoder
         transformer.end = True
         return TransformerWrapper(self.source_encoder,transformer)
+
+class Wav2VecPreTraining(object):
+
+    def __init__(module,optim=torch.optim.Adam,learning_rate=0.0001, mask_prob=0.2, mask_length=4, num_negatives=4):
+        self.module = module
+        self.optimizer = optim(list(self.module.parameters()),lr=lr)
+        self.mask_prob = mask_prob
+        self.mask_length = mask_length
+        self.num_negatives = num_negatives
+
+    def train(self,train_loader,epochs=250,verbose=True,rtn_history=True,device=None):
+
+        history = {'loss':[]}
+
+        if device:
+            self.module.to(device)
+
+        for i in range(epochs):
+
+            if verbose: print(f'Epoch {i+1} ',end='')
+
+            for items in train_loader:
+
+                if device:
+                    items = [i.to(device) for i in items]
+
+                loss = self.training_step(self.module,items)
+
+                loss.backward()
+                self.optimizer.step()
+
+                items = items.cpu()
+                del items
+                if verbose: print('>',end='')
+
+            loss = loss.tolist()
+            history['loss'].append(loss)
+            if verbose: print(f' loss: {loss}')
+
+        if device:
+            self.module = self.module.cpu()
+
+        if rtn_history:
+            return history
+
+        return
+
+    def training_step(self,model,input_values):
+        mask_prob, mask_length, num_negatives = self.mask_prob, self.mask_length, self.num_negatives
+        batch_size, in_channels, raw_sequence_length = input_values[0].shape
+        sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length)
+        mask_time_indices = _compute_mask_indices((batch_size, sequence_length), mask_prob=mask_prob, mask_length=mask_length)
+        sampled_negative_indices = _sample_negative_indices((batch_size, sequence_length), num_negatives=num_negatives, mask_time_indices=mask_time_indices)
+        mask_time_indices = torch.Tensor(mask_time_indices)
+        sampled_negative_indices = torch.Tensor(sampled_negative_indices)
+
+        model.train()
+        outputs = model(input_values, mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices)
+        return outputs.loss
+
+    def save(self,fname):
+        self.module.save_pretrained(fname)
+        return
