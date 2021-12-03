@@ -133,22 +133,22 @@ class Wav2VecPreTraining(object):
 
         return
 
-    # def training_step(self,model,input_values):
-    #     mask_prob, mask_length, num_negatives = self.mask_prob, self.mask_length, self.num_negatives
-    #     batch_size, in_channels, raw_sequence_length = input_values[0].shape
-    #     sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length)
-    #     mask_time_indices = _compute_mask_indices((batch_size, sequence_length), mask_prob=mask_prob, mask_length=mask_length)
-    #     sampled_negative_indices = _sample_negative_indices((batch_size, sequence_length), num_negatives=num_negatives, mask_time_indices=mask_time_indices)
-    #     mask_time_indices = torch.Tensor(mask_time_indices).to(model.device)
-    #     sampled_negative_indices = torch.Tensor(sampled_negative_indices).to(model.device)
-    #
-    #     model.train()
-    #     outputs = model(input_values[0], mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices)
-    #     return outputs.loss
-
     def training_step(self,model,input_values):
-        outputs = model(input_values[0])
+        mask_prob, mask_length, num_negatives = self.mask_prob, self.mask_length, self.num_negatives
+        batch_size, in_channels, raw_sequence_length = input_values[0].shape
+        sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length)
+        mask_time_indices = _compute_mask_indices((batch_size, sequence_length), mask_prob=mask_prob, mask_length=mask_length)
+        sampled_negative_indices = _sample_negative_indices((batch_size, sequence_length), num_negatives=num_negatives, mask_time_indices=mask_time_indices)
+        mask_time_indices = torch.Tensor(mask_time_indices).to(model.device)
+        sampled_negative_indices = torch.Tensor(sampled_negative_indices).to(model.device)
+
+        model.train()
+        outputs = model(input_values[0], mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices)
         return outputs.loss
+
+    # def training_step(self,model,input_values):
+    #     outputs = model(input_values[0])
+    #     return outputs.loss
 
     def save(self,fname):
         self.module.save_pretrained(fname)
