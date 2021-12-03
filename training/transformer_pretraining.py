@@ -112,13 +112,13 @@ class Wav2VecPreTraining(object):
                 loss = self.training_step(self.module,items)
 
                 loss.backward()
-                
+
                 self.optimizer.step()
-                
+
                 if device:
                     items = items.cpu()
                     del items
-                    
+
                 if verbose: print('>',end='')
 
             loss = loss.tolist()
@@ -139,8 +139,8 @@ class Wav2VecPreTraining(object):
         sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length)
         mask_time_indices = _compute_mask_indices((batch_size, sequence_length), mask_prob=mask_prob, mask_length=mask_length)
         sampled_negative_indices = _sample_negative_indices((batch_size, sequence_length), num_negatives=num_negatives, mask_time_indices=mask_time_indices)
-        mask_time_indices = torch.Tensor(mask_time_indices)
-        sampled_negative_indices = torch.Tensor(sampled_negative_indices)
+        mask_time_indices = torch.Tensor(mask_time_indices).to(model.device)
+        sampled_negative_indices = torch.Tensor(sampled_negative_indices).to(model.device)
 
         model.train()
         outputs = model(input_values[0], mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices)
