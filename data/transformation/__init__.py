@@ -154,3 +154,10 @@ def Transform_Cnn():
     for resolution-reduced CNN
     """
     return T.Compose([Unsqueeze()])
+
+def Transform_ReduceRes():
+    """
+    Torch Transformation (torchvision.transforms.transforms.Compose)
+    to reduce resolution by a factor of 4
+    """
+    return T.Compose([ReduceRes()])
