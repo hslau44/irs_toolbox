@@ -108,11 +108,12 @@ class Wav2VecPreTraining(object):
 
                 if device:
                     items = [i.to(device) for i in items]
-
+                
+                self.optimizer.zero_grad()
+                
                 loss = self.training_step(self.module,items)
 
                 loss.backward()
-
                 self.optimizer.step()
 
                 if device:
@@ -146,9 +147,10 @@ class Wav2VecPreTraining(object):
         outputs = model(input_values[0], mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices)
         return outputs.loss
 
-    # def training_step(self,model,input_values):
-    #     outputs = model(input_values[0])
-    #     return outputs.loss
+#     def training_step(self,model,input_values):
+#         model.train()
+#         outputs = model(input_values[0])
+#         return outputs.loss
 
     def save(self,fname):
         self.module.save_pretrained(fname)
