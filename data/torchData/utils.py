@@ -121,11 +121,11 @@ class TransformersDataset(DatasetObject):
         dic = {}
         if isinstance(self.label,np.ndarray):
             X,y = items
-            dic['input_values'] = X
-            dic['label'] = y
+            dic['input_values'] = torch.Tensor(X)
+            dic['label'] = torch.Tensor(y)
         else:
             X = items
-            dic['input_values'] = X
+            dic['input_values'] = torch.Tensor(X)
         return dic
 
     def load_data(self):
